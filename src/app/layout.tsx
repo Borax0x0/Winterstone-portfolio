@@ -1,28 +1,28 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display, Jost } from "next/font/google";
+import { Inter, Playfair_Display, Nunito_Sans } from "next/font/google"; 
 import "./main.css"; 
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import Preloader from "@/components/Preloader"; // <--- 1. Import this
 
-// 1. Configure JOST (Your Luxury Footer Font)
-const jost = Jost({
-  subsets: ["latin"],
-  variable: "--font-jost",
-  display: "swap",
-});
+// ... (Keep your font configurations exactly as they are) ...
 
-// 2. Configure INTER (Your Main Text Font)
 const inter = Inter({ 
   subsets: ["latin"],
-  variable: "--font-inter", // ✅ Essential for your Tailwind config
+  variable: "--font-inter",
   display: "swap",
 });
 
-// 3. Configure PLAYFAIR (Your Headings Font)
 const playfair = Playfair_Display({ 
   subsets: ["latin"],
   variable: '--font-serif',
+  display: "swap",
+});
+
+const nunito = Nunito_Sans({
+  subsets: ["latin"],
+  variable: "--font-nunito",
   display: "swap",
 });
 
@@ -38,13 +38,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
-      {/* 4. Inject all variables into the body */}
-      <body className={`${inter.variable} ${playfair.variable} ${jost.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${playfair.variable} ${nunito.variable} font-sans antialiased`}>
         
+        {/* 2. Add the Preloader at the very top */}
+        <Preloader />
+
         <Navbar />
-
         {children}
-
         <Footer />
         
       </body>

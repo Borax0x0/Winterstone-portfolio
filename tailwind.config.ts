@@ -18,7 +18,7 @@ const config: Config = {
         serif: ['var(--font-playfair)', 'serif'],
         sans: ['var(--font-inter)', 'sans-serif'],
         // NEW: Added for the Forestis-style footer
-        josefin: ['var(--font-jost)', 'sans-serif'], 
+        josefin: ['var(--font-nunito)', 'sans-serif'], 
       },
     },
   },
