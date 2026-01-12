@@ -6,12 +6,6 @@ import { motion } from "framer-motion";
 
 const events = [
   {
-    title: "Aprés Ski DJ Nights",
-    date: "Every Weekend",
-    desc: "As the sun sets behind the peaks, the Great Hall comes alive. Our curated lineup of electronic and downtempo artists provides the perfect soundtrack to your evening cocktail.",
-    image: "/event-dj.jpg" 
-  },
-  {
     title: "The Winter Solstice",
     date: "December 21st",
     desc: "An annual tradition where we shut off all electricity and light the Great Hall solely with beeswax candles and the central hearth. A celebration of darkness and return to light.",
@@ -23,6 +17,12 @@ const events = [
     desc: "Greet the sun as it rises over the Himalayas. Our resident instructor leads a flow designed to acclimate your body to the altitude and stillness.",
     image: "/event-yoga.jpg"
   },
+  {
+    title: "Stargazing & Astronomy",
+    date: "Clear Nights",
+    desc: "At 8,000 feet, the atmosphere is thin and the stars are piercingly bright. Join us on the terrace for guided constellation mapping with our telescope.",
+    image: "/event-star.jpg"
+  }
 ];
 
 export default function BlogPage() {
@@ -31,6 +31,7 @@ export default function BlogPage() {
       
       {/* 1. HERO HEADER */}
       <section className="relative h-[60vh] w-full overflow-hidden flex items-center justify-center bg-stone-900">
+        {/* Background Image Placeholder */}
         <div className="absolute inset-0 bg-black/40 z-0" />
         
         <div className="relative z-10 text-center text-white px-6">
@@ -80,91 +81,7 @@ export default function BlogPage() {
         </motion.div>
       </section>
 
-      {/* 3. NEW FEATURE: THE GUARDIAN (The Dog) */}
-      <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-          
-          {/* Text Side */}
-          <motion.div
-             initial={{ opacity: 0, x: -50 }}
-             whileInView={{ opacity: 1, x: 0 }}
-             viewport={{ once: true }}
-             transition={{ duration: 0.8 }}
-          >
-            <span className="text-saffron text-xs tracking-widest uppercase mb-4 block">The Guardian</span>
-            <h2 className="font-serif text-4xl text-stone-dark mb-6">A Silent Companion</h2>
-            <p className="text-stone-600 font-light leading-relaxed mb-6">
-              If you wake early enough to catch the sunrise, you might spot him. "Buster" isn't technically on the payroll, 
-              but he has been the soul of Winterstone for over a decade. A local mountain shepherd mix with eyes as deep 
-              as the valley, he roams the grounds with a quiet dignity.
-            </p>
-            <p className="text-stone-600 font-light leading-relaxed">
-              He rarely enters the lodge, preferring the crisp air of the terrace. He chooses who he greets, 
-              and guests often say that a nod from Buster is the truest sign of welcome this mountain can offer.
-            </p>
-          </motion.div>
-
-          {/* Image Side */}
-          <motion.div
-             initial={{ opacity: 0, x: 50 }}
-             whileInView={{ opacity: 1, x: 0 }}
-             viewport={{ once: true }}
-             transition={{ duration: 0.8 }}
-             className="relative h-[500px] w-full bg-stone-100 rounded-sm overflow-hidden"
-          >
-             {/* <Image src="/dog-main.jpg" fill className="object-cover" /> */}
-             <div className="absolute inset-0 flex items-center justify-center text-stone-400 font-serif">
-                
-             </div>
-          </motion.div>
-
-        </div>
-      </section>
-
-      {/* 4. NEW FEATURE: WINTER VIEWS (Snowfall) */}
-      <section className="py-24 bg-stone-100">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-          
-          {/* Image Side (Left) */}
-          <motion.div
-             initial={{ opacity: 0, x: -50 }}
-             whileInView={{ opacity: 1, x: 0 }}
-             viewport={{ once: true }}
-             transition={{ duration: 0.8 }}
-             className="order-2 md:order-1 relative h-[500px] w-full bg-white rounded-sm overflow-hidden"
-          >
-             {/* <Image src="/winter-snow.jpg" fill className="object-cover" /> */}
-             <div className="absolute inset-0 flex items-center justify-center text-stone-400 font-serif">
-                
-             </div>
-          </motion.div>
-
-          {/* Text Side (Right) */}
-          <motion.div
-             initial={{ opacity: 0, x: 50 }}
-             whileInView={{ opacity: 1, x: 0 }}
-             viewport={{ once: true }}
-             transition={{ duration: 0.8 }}
-             className="order-1 md:order-2"
-          >
-            <span className="text-saffron text-xs tracking-widest uppercase mb-4 block">The Season</span>
-            <h2 className="font-serif text-4xl text-stone-dark mb-6">The White Silence</h2>
-            <p className="text-stone-600 font-light leading-relaxed mb-6">
-              When winter arrives, it doesn't just snow—it transforms the world. Winterstone is famous for its 
-              "astonishing snowfall," where feet of fresh powder can fall overnight, blanketing the sharp jagged 
-              peaks in soft, rolling white.
-            </p>
-            <p className="text-stone-600 font-light leading-relaxed">
-              The view from the Great Hall during a storm is hypnotic; a wall of white moving against the glass 
-              while you sit by the fire. And when the storm breaks, the sun hitting the fresh snow creates a 
-              blinding, diamond-like clarity that simply doesn't exist at lower altitudes.
-            </p>
-          </motion.div>
-
-        </div>
-      </section>
-
-      {/* 5. EVENTS GRID (Updated with DJ) */}
+      {/* 3. EVENTS GRID */}
       <section className="bg-stone-900 text-cream py-24">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-end mb-16 border-b border-white/10 pb-6">
@@ -207,7 +124,7 @@ export default function BlogPage() {
         </div>
       </section>
 
-      {/* 6. SURROUNDINGS / LOCATION */}
+      {/* 4. SURROUNDINGS / LOCATION */}
       <section className="py-24 max-w-7xl mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
            <div className="order-2 md:order-1">

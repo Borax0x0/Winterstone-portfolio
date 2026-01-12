@@ -34,15 +34,9 @@ export default function AvailabilityModal({
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
 
-  // ✅ FIXED: Initialize state directly with the function
-  // We removed the useEffect and put getBlockedDates here.
   const [blockedDates, setBlockedDates] = useState<Date[]>(getBlockedDates);
 
-  // (Removed the useEffect block completely from here)
-
   if (!isOpen) return null;
-
-  // ... rest of your code (handlers, JSX) remains exactly the same ...
   
   // HANDLE RANGE SELECTION
   const onChange = (dates: [Date | null, Date | null]) => {

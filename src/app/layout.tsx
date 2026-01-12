@@ -4,9 +4,7 @@ import "./main.css";
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import Preloader from "@/components/Preloader"; // <--- 1. Import this
-
-// ... (Keep your font configurations exactly as they are) ...
+import Preloader from "@/components/Preloader";
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -40,7 +38,6 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <body className={`${inter.variable} ${playfair.variable} ${nunito.variable} font-sans antialiased`}>
         
-        {/* 2. Add the Preloader at the very top */}
         <Preloader />
 
         <Navbar />

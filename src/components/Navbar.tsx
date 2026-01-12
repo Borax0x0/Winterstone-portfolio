@@ -47,7 +47,7 @@ export default function Navbar() {
             <Link href="/#rooms" className="hover:text-saffron transition-colors cursor-pointer">
               Rooms
             </Link>
-            <Link href="/#journal" className="hover:text-saffron transition-colors cursor-pointer">
+            <Link href="/blog" className="hover:text-saffron transition-colors cursor-pointer">
               Journal
             </Link>
           </div>
@@ -97,8 +97,9 @@ export default function Navbar() {
             >
               Rooms
             </Link>
+            
             <Link 
-              href="/#journal" 
+              href="/blog" 
               onClick={() => setIsMobileMenuOpen(false)}
               className="text-2xl font-serif hover:text-saffron transition-colors"
             >

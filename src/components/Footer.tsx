@@ -9,12 +9,11 @@ export default function Footer() {
         <div className="text-3xl font-serif font-bold tracking-widest mb-12">
           WINTERSTONE
         </div>
-
-        {/* LINKS - Updated to use 'font-light' */}
+        
+        {/* LINKS GRID */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-16 mb-16 font-josefin">
            
            <div className="flex flex-col gap-4">
-             {/* Note the change: 'font-light' instead of 'font-medium' */}
              <Link href="#" className="text-xs font-light tracking-[0.2em] uppercase hover:text-saffron transition-colors">
                Contact & Arrival
              </Link>

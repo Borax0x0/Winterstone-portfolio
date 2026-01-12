@@ -3,6 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 const About = () => {
   return (
@@ -32,21 +33,24 @@ const About = () => {
             with the mountain. Here, you don't check in—you come home.
           </p>
           
-          <button className="group flex items-center text-xs font-bold tracking-widest uppercase text-forest hover:text-saffron transition-colors">
-            Read Our Story 
-            <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </button>
+          <Link href="/blog">
+            <button className="group flex items-center text-xs font-bold tracking-widest uppercase text-forest hover:text-saffron transition-colors">
+              Read Our Story 
+              <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </Link>
+          
         </motion.div>
 
-        {/* RIGHT: The Image Grid (Using your local files) */}
+        {/* RIGHT: The Image Grid */}
         <div className="grid grid-cols-2 gap-4">
           <motion.div 
-             initial={{ opacity: 0, y: 20 }}
-             whileInView={{ opacity: 1, y: 0 }}
-             transition={{ duration: 0.8, delay: 0.2 }}
-             className="space-y-4"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="space-y-4"
           >
-            {/* Tall Image (Fireplace/Interior) */}
+            {/* Tall Image */}
             <img 
               src="/about-1.jpg" 
               alt="Stone Interior" 
@@ -61,13 +65,13 @@ const About = () => {
           </motion.div>
           
           <motion.div 
-             initial={{ opacity: 0, y: 40 }}
-             whileInView={{ opacity: 1, y: 0 }}
-             transition={{ duration: 0.8, delay: 0.4 }}
-             className="pt-12"
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="pt-12"
           >
-             {/* Offset Tall Image */}
-             <img 
+              {/* Offset Tall Image */}
+              <img 
               src="/about-3.jpg" 
               alt="Snow View" 
               className="w-full h-96 object-cover rounded-sm grayscale hover:grayscale-0 transition-all duration-700"

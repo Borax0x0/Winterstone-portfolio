@@ -7,9 +7,6 @@ export default function Preloader() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // We removed the scroll locking logic here.
-    // No more "document.body.style.overflow = hidden"
-    
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 2000);
@@ -27,7 +24,7 @@ export default function Preloader() {
             opacity: 0, 
             transition: { duration: 1, ease: "easeInOut" } // Slower, elegant fade
           }}
-          // fixed inset-0 covers the screen regardless of scrolling
+
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-stone-950 text-white"
         >
           <div className="text-center">

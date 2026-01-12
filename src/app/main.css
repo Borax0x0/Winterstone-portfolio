@@ -3,10 +3,9 @@
 @tailwind utilities;
 
 html {
-  scroll-behavior: smooth; /* ADD THIS LINE */
+  scroll-behavior: smooth; 
 }
 
-/* Rest of your CSS... */   
 
 /* --- CALENDAR RANGE STYLES --- */
 .react-datepicker {

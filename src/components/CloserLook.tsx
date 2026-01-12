@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 
-// Define the props so we can pass different images for different rooms
+// Define the props to pass different images for different rooms
 interface CloserLookProps {
   image1: string;
   image2: string;

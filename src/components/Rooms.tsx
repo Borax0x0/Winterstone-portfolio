@@ -9,21 +9,21 @@ const rooms = [
     id: 1,
     name: "Skyline Haven",
     slug: "skyline-haven",
-    image: "/skyline-main.jpg", // UPDATED: Uses your new generated hero
+    image: "/skyline-main.jpg", // UPDATED: Uses new hero
     desc: "Balcony suites with sweeping mountain and valley views.",
   },
   {
     id: 2,
     name: "Zen Nest",
     slug: "zen-nest",
-    image: "/zen-main.jpg", // UPDATED: Uses your new generated hero
+    image: "/zen-main.jpg", // UPDATED: Uses new hero
     desc: "A sanctuary designed for yoga, meditation, and stillness.",
   },
   {
     id: 3,
     name: "Sunlit Studio",
     slug: "sunlit-studio",
-    image: "/sunlit-main.jpg", // UPDATED: Uses your new generated hero
+    image: "/sunlit-main.jpg", // UPDATED: Uses new hero
     desc: "Bright, airy ground-floor rooms with expansive windows.",
   },
 ];

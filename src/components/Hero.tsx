@@ -5,8 +5,6 @@ import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 
 const Hero = () => {
-  // NOTE: We removed the 'isScrolled' state and the <nav> block
-  // because the Global Navbar in layout.tsx now handles that job.
 
   return (
     <section className="relative h-screen w-full overflow-hidden">
