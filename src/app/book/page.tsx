@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Calendar, User, Check, Phone, Mail, Loader2, CreditCard } from "lucide-react";
 import emailjs from '@emailjs/browser'; 
-import PaymentModal from "@/components/PaymentModal"; // 1. IMPORT THE MODAL
+import PaymentModal from "@/components/PaymentModal"; 
 
 const ROOMS = [
   { id: "skyline-haven", name: "Skyline Haven", price: 8500, image: "/skyline-main.jpg" },
@@ -27,7 +27,7 @@ function BookingContent() {
   const [phone, setPhone] = useState("");
 
   // PAYMENT & SENDING STATES
-  const [isPaymentOpen, setIsPaymentOpen] = useState(false); // 2. CONTROLS THE MODAL
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false); 
   const [isSending, setIsSending] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -84,7 +84,7 @@ function BookingContent() {
     if (!isNameValid) return "Enter Your Name";
     if (!isEmailValid) return "Enter Valid Email";
     if (!isPhoneValid) return "Enter Valid Phone Number";
-    return "Proceed to Payment"; // 3. UPDATED TEXT
+    return "Proceed to Payment"; 
   };
 
   // --- STEP 1: OPEN THE PAYMENT PORTAL ---
@@ -100,7 +100,8 @@ function BookingContent() {
     const templateParams = {
       room_name: selectedRoom.name,
       user_name: name,
-      user_email: email,
+      user_email: email, // This shows the email inside the message body
+      to_email: email,   // <--- ✅ FIXED: This tells EmailJS where to deliver the email
       user_phone: phone,
       check_in: checkIn,
       check_out: checkOut,
@@ -110,15 +111,15 @@ function BookingContent() {
 
     try {
       await emailjs.send(
-        "service_9fdhxvg",     // YOUR SERVICE ID
+        "service_lhpznb8",    // YOUR SERVICE ID
         "template_jl7lgzs",    // YOUR TEMPLATE ID
         templateParams,
         "YQ6NFN-uzowgHsZp4"    // YOUR PUBLIC KEY
       );
 
       setIsSending(false);
-      setIsPaymentOpen(false); // Close the modal
-      setIsSuccess(true);      // Show success state on main page
+      setIsPaymentOpen(false); 
+      setIsSuccess(true);      
       alert("Booking Confirmed! Check your email.");
 
     } catch (error) {
@@ -136,7 +137,7 @@ function BookingContent() {
       <PaymentModal 
         isOpen={isPaymentOpen}
         onClose={() => setIsPaymentOpen(false)}
-        onPaymentSuccess={finalizeBooking} // Connects payment to email
+        onPaymentSuccess={finalizeBooking} 
       />
 
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-12">
@@ -294,9 +295,9 @@ function BookingContent() {
               <span>₹{total.toLocaleString()}</span>
             </div>
 
-            {/* 5. UPDATED BUTTON: OPENS PORTAL */}
+            {/* 5. BUTTON: OPENS PORTAL */}
             <button 
-              onClick={handleOpenPayment} // Calls the modal logic
+              onClick={handleOpenPayment} 
               disabled={!isFormValid || isSending || isSuccess}
               className={`w-full py-4 text-xs font-bold tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2
                 ${isSuccess 
