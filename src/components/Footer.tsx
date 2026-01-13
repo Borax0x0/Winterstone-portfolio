@@ -19,15 +19,15 @@ export default function Footer() {
           <div className="space-y-4 text-sm font-light">
             <div className="flex items-center gap-3 hover:text-white transition-colors cursor-pointer">
               <MapPin size={16} />
-              <span>Old Manali Road, Himachal Pradesh, 175131</span>
+              <span>Bhagsunag Rd, near Taxi Stand, Bhagsu Nag, Uppar Bhagsu, Mcleodganj, Himachal Pradesh 176216</span>
             </div>
             <div className="flex items-center gap-3 hover:text-white transition-colors cursor-pointer">
               <Phone size={16} />
-              <span>+91 98765 43210</span>
+              <span>+91 99582 70492</span>
             </div>
             <div className="flex items-center gap-3 hover:text-white transition-colors cursor-pointer">
               <Mail size={16} />
-              <span>concierge@winterstone.com</span>
+              <span>winterstone110104@gmail.com</span>
             </div>
           </div>
 
@@ -47,32 +47,33 @@ export default function Footer() {
               <span className="text-xs font-bold tracking-widest uppercase text-saffron">Current Conditions</span>
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" /> {/* Live Indicator */}
             </div>
-            <h4 className="text-stone-300 font-serif text-lg">Manali, Himalayas</h4>
+            <h4 className="text-stone-300 font-serif text-lg">Mcleodganj, Dharamshala</h4>
           </div>
 
           <div className="flex items-end gap-4 mt-6">
             <CloudSnow size={48} className="text-white" />
             <div>
-              <span className="text-4xl font-bold text-white">-4°C</span>
-              <p className="text-sm text-stone-400">Heavy Snowfall</p>
+              <span className="text-4xl font-bold text-white">-2°C</span>
+              <p className="text-sm text-stone-400">Light Snowfall</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-stone-800">
             <div className="flex items-center gap-2 text-xs">
               <Wind size={14} />
-              <span>12 km/h NW</span>
+              <span>8 km/h NE</span>
             </div>
             <div className="flex items-center gap-2 text-xs">
               <CloudSnow size={14} />
-              <span>8" Fresh Powder</span>
+              <span>4" Fresh Powder</span>
             </div>
           </div>
         </div>
 
-        {/* COL 3: THE CLICKABLE MAP (Redirects to YOUR EXACT LOCATION) */}
+        {/* COL 3: THE CLICKABLE MAP */}
         <a 
-          href="https://maps.app.goo.gl/zVVEHuLHSPsPuKDs6?g_st=iw" // ✅ UPDATED: Your exact location
+          // LINK: Redirects to your exact link
+          href="https://maps.app.goo.gl/zVVEHuLHSPsPuKDs6?g_st=iw" 
           target="_blank"
           rel="noopener noreferrer"
           className="h-full min-h-[250px] w-full bg-stone-900 rounded-sm overflow-hidden relative border border-stone-800 group block cursor-pointer"
@@ -80,9 +81,9 @@ export default function Footer() {
           {/* Map Overlay Gradient */}
           <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 to-transparent pointer-events-none z-10 transition-opacity duration-500 group-hover:opacity-50" />
 
-          {/* Google Map Embed */}
+          {/* Google Map Embed - PREVIEW: Uses 'q=' parameter to pin your EXACT address */}
           <iframe 
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3373.136222872346!2d77.1868!3d32.2396!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39048708163fd0de%3A0x8123a53e5064ad6b!2sManali%2C%20Himachal%20Pradesh!5e0!3m2!1sen!2sin!4v1642152862000!5m2!1sen!2sin" 
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3375.919536109345!2d76.3265!3d32.2458!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x391b5391c7848e3d%3A0x4037568582457c15!2sBhagsunag%20Taxi%20Stand!5e0!3m2!1sen!2sin!4v1705300000000!5m2!1sen!2sin"
             width="100%" 
             height="100%" 
             style={{ border: 0, filter: "grayscale(100%) invert(90%) contrast(80%)" }} 

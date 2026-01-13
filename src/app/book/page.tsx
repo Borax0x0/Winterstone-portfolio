@@ -100,8 +100,8 @@ function BookingContent() {
     const templateParams = {
       room_name: selectedRoom.name,
       user_name: name,
-      user_email: email, // This shows the email inside the message body
-      to_email: email,   // <--- ✅ FIXED: This tells EmailJS where to deliver the email
+      user_email: email, 
+      to_email: email, 
       user_phone: phone,
       check_in: checkIn,
       check_out: checkOut,
@@ -110,11 +110,12 @@ function BookingContent() {
     };
 
     try {
+      // MAKE SURE THIS SERVICE ID MATCHES YOUR DASHBOARD
       await emailjs.send(
-        "service_lhpznb8",    // YOUR SERVICE ID
-        "template_jl7lgzs",    // YOUR TEMPLATE ID
+        "service_9fdhxvg",    
+        "template_jl7lgzs",    
         templateParams,
-        "YQ6NFN-uzowgHsZp4"    // YOUR PUBLIC KEY
+        "YQ6NFN-uzowgHsZp4"    
       );
 
       setIsSending(false);
@@ -267,9 +268,9 @@ function BookingContent() {
           </div>
         </div>
 
-        {/* RIGHT: SUMMARY */}
+        {/* RIGHT: SUMMARY (UPDATED: REMOVED STICKY, ADDED H-FIT) */}
         <div className="lg:col-span-1">
-          <div className="bg-stone-900 text-stone-100 p-8 rounded-sm sticky top-32 border border-stone-800 shadow-2xl">
+          <div className="bg-stone-900 text-stone-100 p-8 rounded-sm border border-stone-800 shadow-2xl h-fit">
             <h3 className="font-serif text-2xl mb-6">Reservation Summary</h3>
             
             <div className="flex justify-between items-center pb-4 border-b border-stone-800 mb-4">
@@ -295,7 +296,7 @@ function BookingContent() {
               <span>₹{total.toLocaleString()}</span>
             </div>
 
-            {/* 5. BUTTON: OPENS PORTAL */}
+            {/* BUTTON */}
             <button 
               onClick={handleOpenPayment} 
               disabled={!isFormValid || isSending || isSuccess}
