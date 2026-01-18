@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Calendar, User, Check, Phone, Mail, Loader2, CreditCard } from "lucide-react";
-import emailjs from '@emailjs/browser'; 
-import PaymentModal from "@/components/PaymentModal"; 
+import emailjs from '@emailjs/browser';
+import PaymentModal from "@/components/PaymentModal";
+import InvoiceModal from "@/components/InvoiceModal";
 
 const ROOMS = [
   { id: "skyline-haven", name: "Skyline Haven", price: 8500, image: "/skyline-main.jpg" },
@@ -14,20 +15,23 @@ const ROOMS = [
 ];
 
 function BookingContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   // STATE
   const [selectedRoomId, setSelectedRoomId] = useState(ROOMS[0].id);
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [guests, setGuests] = useState(2);
-  
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
   // PAYMENT & SENDING STATES
-  const [isPaymentOpen, setIsPaymentOpen] = useState(false); 
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+  const [invoiceData, setInvoiceData] = useState<any>(null); // Store confirmed booking data
   const [isSending, setIsSending] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -51,30 +55,33 @@ function BookingContent() {
 
   useEffect(() => {
     if (checkIn && checkOut && checkOut <= checkIn) {
-      setCheckOut(""); 
+      setCheckOut("");
     }
   }, [checkIn]);
 
   // CALCULATIONS
   const selectedRoom = ROOMS.find((r) => r.id === selectedRoomId) || ROOMS[0];
-  
+
   const calculateTotal = () => {
     if (!checkIn || !checkOut) return 0;
     const start = new Date(checkIn);
     const end = new Date(checkOut);
-    const diffTime = end.getTime() - start.getTime(); 
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    const diffTime = end.getTime() - start.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays > 0 ? diffDays * selectedRoom.price : 0;
   };
 
   const total = calculateTotal();
+  const basePrice = total; // Calculated based on room price * nights
+  const taxes = Math.round(basePrice * 0.12); // 12% TAX
+  const grandTotal = basePrice + taxes;
   const nights = total / selectedRoom.price || 0;
-  
+
   // VALIDATION
   const isDateValid = checkIn !== "" && checkOut !== "" && nights > 0;
-  const isEmailValid = email.includes("@") && email.includes("."); 
-  const isPhoneValid = phone.length >= 10;
-  const isNameValid = name.length > 2;
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); // STRICT REGEX
+  const isPhoneValid = phone.length === 10; // EXACTLY 10 DIGITS
+  const isNameValid = name.trim().length > 2; // Basic check, regex handles input restriction
   const isFormValid = isDateValid && isEmailValid && isPhoneValid && isNameValid;
 
   const getButtonText = () => {
@@ -84,7 +91,7 @@ function BookingContent() {
     if (!isNameValid) return "Enter Your Name";
     if (!isEmailValid) return "Enter Valid Email";
     if (!isPhoneValid) return "Enter Valid Phone Number";
-    return "Proceed to Payment"; 
+    return "Proceed to Payment";
   };
 
   // --- STEP 1: OPEN THE PAYMENT PORTAL ---
@@ -100,28 +107,45 @@ function BookingContent() {
     const templateParams = {
       room_name: selectedRoom.name,
       user_name: name,
-      user_email: email, 
-      to_email: email, 
+      user_email: email,
+      to_email: email,
       user_phone: phone,
       check_in: checkIn,
       check_out: checkOut,
       nights: nights,
-      total_price: total.toLocaleString(),
+      total_price: grandTotal.toLocaleString(), // Updated to send grandTotal
     };
 
     try {
       // MAKE SURE THIS SERVICE ID MATCHES YOUR DASHBOARD
       await emailjs.send(
-        "service_9fdhxvg",    
-        "template_jl7lgzs",    
+        "service_unmlk9x",
+        "template_ivzrct3",
         templateParams,
-        "YQ6NFN-uzowgHsZp4"    
+        "gzsR1jfP0McxMjdf4"
       );
 
       setIsSending(false);
-      setIsPaymentOpen(false); 
-      setIsSuccess(true);      
-      alert("Booking Confirmed! Check your email.");
+      setIsPaymentOpen(false);
+      setIsSuccess(true);
+
+      // GENERATE INVOICE DATA
+      const bookingId = "WS-" + Math.floor(1000 + Math.random() * 9000); // WS-1234
+      setInvoiceData({
+        id: bookingId,
+        roomName: selectedRoom.name,
+        guestName: name,
+        email: email,
+        checkIn: checkIn,
+        checkOut: checkOut,
+        nights: nights,
+        basePrice: basePrice,
+        taxes: taxes,
+        grandTotal: grandTotal,
+      });
+
+      // OPEN INVOICE
+      setIsInvoiceOpen(true);
 
     } catch (error) {
       console.error("FAILED...", error);
@@ -133,30 +157,36 @@ function BookingContent() {
 
   return (
     <div className="min-h-screen bg-stone-950 pt-32 pb-24 px-6 relative">
-      
+
       {/* 4. RENDER PAYMENT MODAL */}
-      <PaymentModal 
+      <PaymentModal
         isOpen={isPaymentOpen}
         onClose={() => setIsPaymentOpen(false)}
-        onPaymentSuccess={finalizeBooking} 
+        onPaymentSuccess={finalizeBooking}
+      />
+
+      {/* 5. RENDER INVOICE MODAL */}
+      <InvoiceModal
+        isOpen={isInvoiceOpen}
+        bookingDetails={invoiceData}
       />
 
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-12">
-        
+
         {/* LEFT: FORM */}
         <div className="lg:col-span-2">
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="relative z-50 inline-flex items-center text-xs font-bold tracking-widest text-stone-400 hover:text-white mb-8 uppercase transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" /> Return Home
           </Link>
-          
+
           <h1 className="font-serif text-4xl text-white mb-2">Confirm Your Stay</h1>
           <p className="text-stone-400 mb-10">You are just a few steps away from the mountains.</p>
 
           <div className="bg-white p-8 rounded-sm shadow-xl border border-stone-800 space-y-8">
-            
+
             {/* 1. ROOMS */}
             <div>
               <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">Select Suite</label>
@@ -165,11 +195,10 @@ function BookingContent() {
                   <button
                     key={room.id}
                     onClick={() => setSelectedRoomId(room.id)}
-                    className={`p-4 border text-left transition-all ${
-                      selectedRoomId === room.id 
-                        ? "border-saffron bg-stone-50 ring-1 ring-saffron" 
-                        : "border-stone-200 hover:border-stone-400"
-                    }`}
+                    className={`p-4 border text-left transition-all ${selectedRoomId === room.id
+                      ? "border-saffron bg-stone-50 ring-1 ring-saffron"
+                      : "border-stone-200 hover:border-stone-400"
+                      }`}
                   >
                     <div className="font-serif text-lg text-stone-900">{room.name}</div>
                     <div className="text-xs text-stone-500 mt-1">₹{room.price.toLocaleString()} / night</div>
@@ -185,8 +214,8 @@ function BookingContent() {
                 <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">Check In</label>
                 <div className="relative">
                   <Calendar className="absolute left-4 top-3.5 w-4 h-4 text-stone-400" />
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     value={checkIn}
                     min={getToday()}
                     className="w-full pl-12 pr-4 py-3 border border-stone-200 focus:outline-none focus:border-saffron text-sm bg-transparent"
@@ -198,10 +227,10 @@ function BookingContent() {
                 <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">Check Out</label>
                 <div className="relative">
                   <Calendar className="absolute left-4 top-3.5 w-4 h-4 text-stone-400" />
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     value={checkOut}
-                    min={getNextDay(checkIn)} 
+                    min={getNextDay(checkIn)}
                     disabled={!checkIn}
                     className={`w-full pl-12 pr-4 py-3 border border-stone-200 focus:outline-none focus:border-saffron text-sm bg-transparent ${!checkIn ? 'opacity-50 cursor-not-allowed' : ''}`}
                     onChange={(e) => setCheckOut(e.target.value)}
@@ -212,7 +241,7 @@ function BookingContent() {
                 <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">Guests</label>
                 <div className="relative">
                   <User className="absolute left-4 top-3.5 w-4 h-4 text-stone-400" />
-                  <select 
+                  <select
                     className="w-full pl-12 pr-4 py-3 border border-stone-200 focus:outline-none focus:border-saffron text-sm bg-transparent appearance-none"
                     value={guests}
                     onChange={(e) => setGuests(parseInt(e.target.value))}
@@ -227,52 +256,54 @@ function BookingContent() {
 
             {/* 3. PERSONAL DETAILS */}
             <div>
-               <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">Personal Details</label>
-               <div className="grid grid-cols-1 gap-4">
-                 <div className="relative">
-                   <User className="absolute left-4 top-3.5 w-4 h-4 text-stone-400" />
-                   <input 
-                     type="text" 
-                     placeholder="Full Name" 
-                     value={name}
-                     onChange={(e) => setName(e.target.value)}
-                     className="w-full pl-12 pr-4 py-3 border border-stone-200 focus:outline-none focus:border-saffron text-sm" 
-                   />
-                 </div>
-                 <div className="relative">
-                   <Mail className="absolute left-4 top-3.5 w-4 h-4 text-stone-400" />
-                   <input 
-                     type="email" 
-                     placeholder="Email Address" 
-                     value={email}
-                     onChange={(e) => setEmail(e.target.value)}
-                     className={`w-full pl-12 pr-4 py-3 border focus:outline-none text-sm transition-colors ${
-                       email.length > 0 && !isEmailValid ? "border-red-300 bg-red-50" : "border-stone-200 focus:border-saffron"
-                     }`}
-                   />
-                 </div>
-                 <div className="relative">
-                   <Phone className="absolute left-4 top-3.5 w-4 h-4 text-stone-400" />
-                   <input 
-                     type="tel" 
-                     placeholder="Phone Number" 
-                     value={phone}
-                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                     className={`w-full pl-12 pr-4 py-3 border focus:outline-none text-sm transition-colors ${
-                       phone.length > 0 && !isPhoneValid ? "border-red-300 bg-red-50" : "border-stone-200 focus:border-saffron"
-                     }`}
-                   />
-                 </div>
-               </div>
+              <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">Personal Details</label>
+              <div className="grid grid-cols-1 gap-4">
+                <div className="relative">
+                  <User className="absolute left-4 top-3.5 w-4 h-4 text-stone-400" />
+                  <input
+                    type="text"
+                    placeholder="Full Name"
+                    value={name}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (/^[a-zA-Z\s]*$/.test(val)) setName(val);
+                    }}
+                    className="w-full pl-12 pr-4 py-3 border border-stone-200 focus:outline-none focus:border-saffron text-sm"
+                  />
+                </div>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-3.5 w-4 h-4 text-stone-400" />
+                  <input
+                    type="email"
+                    placeholder="Email Address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={`w-full pl-12 pr-4 py-3 border focus:outline-none text-sm transition-colors ${email.length > 0 && !isEmailValid ? "border-red-300 bg-red-50" : "border-stone-200 focus:border-saffron"
+                      }`}
+                  />
+                </div>
+                <div className="relative">
+                  <Phone className="absolute left-4 top-3.5 w-4 h-4 text-stone-400" />
+                  <input
+                    type="tel"
+                    placeholder="Phone Number"
+                    value={phone}
+                    maxLength={10}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                    className={`w-full pl-12 pr-4 py-3 border focus:outline-none text-sm transition-colors ${phone.length > 0 && !isPhoneValid ? "border-red-300 bg-red-50" : "border-stone-200 focus:border-saffron"
+                      }`}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* RIGHT: SUMMARY (UPDATED: REMOVED STICKY, ADDED H-FIT) */}
+        {/* RIGHT: SUMMARY (INVOICE STYLE) */}
         <div className="lg:col-span-1">
           <div className="bg-stone-900 text-stone-100 p-8 rounded-sm border border-stone-800 shadow-2xl h-fit">
-            <h3 className="font-serif text-2xl mb-6">Reservation Summary</h3>
-            
+            <h3 className="font-serif text-2xl mb-6">Invoice Summary</h3>
+
             <div className="flex justify-between items-center pb-4 border-b border-stone-800 mb-4">
               <span className="text-sm opacity-80">Suite</span>
               <span className="font-bold">{selectedRoom.name}</span>
@@ -281,31 +312,43 @@ function BookingContent() {
             <div className="flex justify-between items-center pb-4 border-b border-stone-800 mb-4">
               <span className="text-sm opacity-80">Dates</span>
               <span className="text-sm text-right">
-                {checkIn ? new Date(checkIn).toLocaleDateString() : "--"} <br/> to <br/> 
+                {checkIn ? new Date(checkIn).toLocaleDateString() : "--"} <br /> to <br />
                 {checkOut ? new Date(checkOut).toLocaleDateString() : "--"}
               </span>
             </div>
 
-            <div className="flex justify-between items-center pb-4 border-b border-stone-800 mb-8">
+            <div className="flex justify-between items-center pb-4 border-b border-stone-800 mb-6">
               <span className="text-sm opacity-80">Duration</span>
               <span>{nights > 0 ? `${nights} Nights` : "--"}</span>
             </div>
 
+            {/* INVOICE BREAKDOWN */}
+            <div className="space-y-3 mb-6 pb-6 border-b border-stone-800">
+              <div className="flex justify-between text-sm opacity-70">
+                <span>Base Rate</span>
+                <span>₹{basePrice.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-sm opacity-70">
+                <span>Taxes & Fees (12%)</span>
+                <span>₹{taxes.toLocaleString()}</span>
+              </div>
+            </div>
+
             <div className="flex justify-between items-center text-xl font-serif font-bold text-saffron mb-8">
-              <span>Total</span>
-              <span>₹{total.toLocaleString()}</span>
+              <span>Grand Total</span>
+              <span>₹{grandTotal.toLocaleString()}</span>
             </div>
 
             {/* BUTTON */}
-            <button 
-              onClick={handleOpenPayment} 
+            <button
+              onClick={handleOpenPayment}
               disabled={!isFormValid || isSending || isSuccess}
               className={`w-full py-4 text-xs font-bold tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2
-                ${isSuccess 
-                   ? "bg-green-600 text-white cursor-default" 
-                   : isFormValid && !isSending
-                     ? "bg-saffron text-stone-900 hover:bg-white" 
-                     : "bg-stone-800 text-stone-500 cursor-not-allowed"
+                ${isSuccess
+                  ? "bg-green-600 text-white cursor-default"
+                  : isFormValid && !isSending
+                    ? "bg-saffron text-stone-900 hover:bg-white"
+                    : "bg-stone-800 text-stone-500 cursor-not-allowed"
                 }
               `}
             >
@@ -316,7 +359,7 @@ function BookingContent() {
               )}
               {getButtonText()}
             </button>
-            
+
             <p className="text-[10px] text-center mt-4 opacity-50 uppercase tracking-wider">
               Secure Payment • Free Cancellation
             </p>
