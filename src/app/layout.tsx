@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import { AuthProvider } from "@/context/AuthContext";
 import { EventProvider } from "@/context/EventContext";
 import { EmployeeProvider } from "@/context/EmployeeContext";
+import { BookingProvider } from "@/context/BookingContext";
 import { Toaster } from "react-hot-toast";
 
 const inter = Inter({
@@ -43,10 +44,12 @@ export default function RootLayout({
         <AuthProvider>
           <EventProvider>
             <EmployeeProvider>
-              <Navbar />
-              {children}
-              <Footer />
-              <Toaster />
+              <BookingProvider> {/* Added BookingProvider */}
+                <Navbar />
+                {children}
+                <Footer />
+                <Toaster position="bottom-right" /> {/* Modified Toaster position */}
+              </BookingProvider> {/* Closed BookingProvider */}
             </EmployeeProvider>
           </EventProvider>
         </AuthProvider>

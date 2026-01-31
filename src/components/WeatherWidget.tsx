@@ -1,17 +1,45 @@
 "use client";
 
-import React, { useState, useEffect } from "react"; // Added React imports
-import { CloudSnow, Wind } from "lucide-react";
+import React from "react";
+import { CloudSnow, Wind, Sun, CloudRain, Cloud, Loader2 } from "lucide-react";
 import { useMotionValue, useMotionTemplate, motion } from "framer-motion";
+import { useWeather } from "@/hooks/useWeather";
 
 export default function WeatherWidget() {
     const mouseX = useMotionValue(0);
     const mouseY = useMotionValue(0);
+    const { weather, loading } = useWeather();
 
     function handleMouseMove({ currentTarget, clientX, clientY }: React.MouseEvent) {
         const { left, top } = currentTarget.getBoundingClientRect();
         mouseX.set(clientX - left);
         mouseY.set(clientY - top);
+    }
+
+    const spotlightBg = useMotionTemplate`
+        radial-gradient(
+            200px circle at ${mouseX}px ${mouseY}px,
+            rgba(212, 175, 55, 0.15),
+            transparent 80%
+        )
+    `;
+
+    // Helper to get icon based on weather code/condition
+    const getWeatherIcon = (code: number, size: number = 24) => {
+        if (code === 0) return <Sun size={size} className="text-saffron group-hover:scale-110 transition-transform duration-500" />;
+        if (code >= 1 && code <= 3) return <Cloud size={size} className="text-stone-300 group-hover:scale-110 transition-transform duration-500" />;
+        if (code >= 51 && code <= 67) return <CloudRain size={size} className="text-blue-300 group-hover:scale-110 transition-transform duration-500" />;
+        if (code >= 71 && code <= 77) return <CloudSnow size={size} className="text-white group-hover:scale-110 transition-transform duration-500" />;
+        if (code >= 95) return <Wind size={size} className="text-stone-400 group-hover:scale-110 transition-transform duration-500" />;
+        return <Sun size={size} className="text-saffron group-hover:scale-110 transition-transform duration-500" />;
+    };
+
+    if (loading || !weather) {
+        return (
+            <div className="h-full bg-stone-900/50 p-8 rounded-sm border border-stone-800 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-stone-600" />
+            </div>
+        );
     }
 
     return (
@@ -22,15 +50,7 @@ export default function WeatherWidget() {
             {/* SPOTLIGHT EFFECT */}
             <motion.div
                 className="pointer-events-none absolute -inset-px rounded-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                style={{
-                    background: useMotionTemplate`
-                        radial-gradient(
-                            200px circle at ${mouseX}px ${mouseY}px,
-                            rgba(212, 175, 55, 0.15),
-                            transparent 80%
-                        )
-                    `,
-                }}
+                style={{ background: spotlightBg }}
             />
 
             <div>
@@ -42,21 +62,21 @@ export default function WeatherWidget() {
             </div>
 
             <div className="flex items-end gap-4 mt-6 relative z-10">
-                <CloudSnow size={48} className="text-white group-hover:scale-110 transition-transform duration-500" />
+                {getWeatherIcon(weather.code, 48)}
                 <div>
-                    <span className="text-4xl font-bold text-white">-2°C</span>
-                    <p className="text-sm text-stone-400">Light Snowfall</p>
+                    <span className="text-4xl font-bold text-white">{weather.temp}°C</span>
+                    <p className="text-sm text-stone-400">{weather.condition}</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-stone-800 relative z-10">
-                <div className="flex items-center gap-2 text-xs">
+                <div className="flex items-center gap-2 text-xs text-stone-400">
                     <Wind size={14} />
-                    <span>8 km/h NE</span>
+                    <span>{weather.windSpeed} km/h</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs">
-                    <CloudSnow size={14} />
-                    <span>4" Fresh Powder</span>
+                <div className="flex items-center gap-2 text-xs text-stone-400">
+                    <CloudRain size={14} />
+                    <span>{weather.humidity}% Humidity</span>
                 </div>
             </div>
         </div>

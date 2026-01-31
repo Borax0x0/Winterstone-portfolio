@@ -48,10 +48,63 @@ html {
   color: inherit !important;
 }
 
+/* Blocked/Excluded Dates - Soft red + strikethrough */
+.react-datepicker__day--excluded {
+  background-color: #fecaca !important; /* Soft red/coral */
+  color: #991b1b !important; /* Dark red text */
+  text-decoration: line-through !important;
+  cursor: not-allowed !important;
+  border-radius: 4px !important;
+  opacity: 0.9 !important;
+}
+
+.react-datepicker__day--excluded:hover {
+  background-color: #fca5a5 !important; /* Slightly darker on hover */
+}
+
+/* Disabled dates (past dates, etc) */
+.react-datepicker__day--disabled {
+  color: #d1d5db !important;
+  cursor: not-allowed !important;
+}
+
 /* Make it responsive: Stack calendars on mobile */
 @media (max-width: 768px) {
   .react-datepicker {
     flex-direction: column !important;
+  }
+  
+  /* Larger touch targets for mobile */
+  .react-datepicker__day {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+    line-height: 2.5rem !important;
+    margin: 0.15rem !important;
+    font-size: 0.875rem !important;
+  }
+  
+  .react-datepicker__day-name {
+    width: 2.5rem !important;
+    font-size: 0.75rem !important;
+  }
+  
+  .react-datepicker__month-container {
+    margin: 5px !important;
+    padding: 8px !important;
+  }
+  
+  /* Center popup on mobile */
+  .react-datepicker-popper {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 9999 !important;
+  }
+  
+  .react-datepicker-popper[data-placement^="bottom"],
+  .react-datepicker-popper[data-placement^="top"] {
+    padding: 0 !important;
   }
 }
 

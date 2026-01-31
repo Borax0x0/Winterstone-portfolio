@@ -12,7 +12,7 @@ import { useState } from "react";
 
 export default function BlogPage() {
   const { user } = useAuth();
-  const { upcomingEvents, pastEvents, addEvent, updateEvent, deleteEvent } = useEvents();
+  const { upcomingEvents, pastEvents, addEvent, updateEvent, deleteEvent, isLoading } = useEvents();
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,19 +25,19 @@ export default function BlogPage() {
     setIsModalOpen(true);
   };
 
-  const handleSave = (eventData: Omit<Event, "id">) => {
+  const handleSave = async (eventData: Omit<Event, "id" | "_id">) => {
     if (modalMode === "add") {
-      addEvent(eventData);
+      await addEvent(eventData);
       toast.success("Event created successfully!");
     } else if (modalMode === "edit" && selectedEvent) {
-      updateEvent(selectedEvent.id, eventData);
+      await updateEvent(selectedEvent._id || selectedEvent.id!, eventData);
       toast.success("Event updated!");
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this event?")) {
-      deleteEvent(id);
+      await deleteEvent(id);
       toast.success("Event deleted.");
     }
   };
@@ -52,6 +52,7 @@ export default function BlogPage() {
         initialData={selectedEvent}
       />
 
+      {/* ... HERO SECTIONS UNCHANGED ... */}
       {/* 1. HERO HEADER */}
       <section className="relative h-screen w-full overflow-hidden flex items-center justify-center bg-stone-900">
 
@@ -215,10 +216,20 @@ export default function BlogPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {upcomingEvents.length > 0 ? (
+            {isLoading ? (
+              // Loading Skeleton
+              [1, 2, 3].map((i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="h-64 bg-stone-800 rounded-sm mb-6"></div>
+                  <div className="h-4 bg-stone-800 w-20 mb-3"></div>
+                  <div className="h-6 bg-stone-800 w-3/4 mb-3"></div>
+                  <div className="h-4 bg-stone-800 w-full"></div>
+                </div>
+              ))
+            ) : upcomingEvents.length > 0 ? (
               upcomingEvents.map((event) => (
                 <motion.div
-                  key={event.id}
+                  key={event._id || event.id}
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
@@ -242,7 +253,7 @@ export default function BlogPage() {
                           <Edit2 size={14} />
                         </button>
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleDelete(event.id); }}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(event._id || event.id!); }}
                           className="bg-red-500/90 p-2 rounded-full text-white hover:bg-red-600 transition-colors"
                           title="Delete Event"
                         >
@@ -276,9 +287,18 @@ export default function BlogPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {pastEvents.map((event) => (
+            {isLoading ? (
+              // Loading Skeleton for Past
+              [1, 2, 3].map((i) => (
+                <div key={i} className="animate-pulse opacity-50">
+                  <div className="h-48 bg-stone-700 rounded-sm mb-6"></div>
+                  <div className="h-3 bg-stone-700 w-16 mb-3"></div>
+                  <div className="h-5 bg-stone-700 w-2/3"></div>
+                </div>
+              ))
+            ) : pastEvents.map((event) => (
               <motion.div
-                key={event.id}
+                key={event._id || event.id}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -301,7 +321,7 @@ export default function BlogPage() {
                         <Edit2 size={12} />
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleDelete(event.id); }}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(event._id || event.id!); }}
                         className="bg-red-500/90 p-2 rounded-full text-white hover:bg-red-600 transition-colors"
                       >
                         <Trash2 size={12} />

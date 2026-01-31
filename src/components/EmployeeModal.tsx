@@ -8,7 +8,7 @@ import { Employee, EmployeeRole, EmployeeStatus } from "@/context/EmployeeContex
 interface EmployeeModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (employeeData: Omit<Employee, "id">) => void;
+    onSubmit: (employeeData: Omit<Employee, "id" | "_id">) => void;
     initialData?: Employee;
     title: string;
 }

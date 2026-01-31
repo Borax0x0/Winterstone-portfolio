@@ -6,7 +6,8 @@ export type EmployeeRole = "Manager" | "Receptionist" | "Housekeeping" | "Kitche
 export type EmployeeStatus = "Active" | "On Leave" | "Terminated";
 
 export interface Employee {
-    id: string;
+    _id: string; // MongoDB
+    id?: string; // Fallback
     name: string;
     role: EmployeeRole;
     email: string;
@@ -17,78 +18,96 @@ export interface Employee {
 
 interface EmployeeContextType {
     employees: Employee[];
-    addEmployee: (employee: Omit<Employee, "id">) => void;
-    updateEmployee: (id: string, updatedEmployee: Partial<Employee>) => void;
-    deleteEmployee: (id: string) => void;
+    addEmployee: (employee: Omit<Employee, "_id" | "id">) => Promise<void>;
+    updateEmployee: (id: string, updatedEmployee: Partial<Employee>) => Promise<void>;
+    deleteEmployee: (id: string) => Promise<void>;
+    isLoading: boolean;
 }
 
 const EmployeeContext = createContext<EmployeeContextType | undefined>(undefined);
 
-const INITIAL_EMPLOYEES: Employee[] = [
-    {
-        id: "1",
-        name: "Rajesh Kumar",
-        role: "Manager",
-        email: "rajesh@winterstone.com",
-        phone: "+91 99999 00001",
-        status: "Active",
-        joinedDate: "2020-03-15"
-    },
-    {
-        id: "2",
-        name: "Sunita Sharma",
-        role: "Receptionist",
-        email: "sunita@winterstone.com",
-        phone: "+91 99999 00002",
-        status: "Active",
-        joinedDate: "2022-08-01"
-    },
-    {
-        id: "3",
-        name: "Vikram Singh",
-        role: "Housekeeping",
-        email: "",
-        phone: "+91 99999 00003",
-        status: "Active",
-        joinedDate: "2023-01-10"
-    }
-];
-
 export function EmployeeProvider({ children }: { children: React.ReactNode }) {
-    const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
-    const [isMounted, setIsMounted] = useState(false);
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    // Load from LocalStorage
+    // Fetch Employees on Mount
     useEffect(() => {
-        setIsMounted(true);
-        const stored = localStorage.getItem("winterstone_employees");
-        if (stored) {
-            setEmployees(JSON.parse(stored));
-        }
+        const fetchEmployees = async () => {
+            try {
+                const res = await fetch('/api/employees');
+                if (res.ok) {
+                    const data = await res.json();
+                    setEmployees(data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch employees", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchEmployees();
     }, []);
 
-    // Save to LocalStorage
-    useEffect(() => {
-        if (isMounted) {
-            localStorage.setItem("winterstone_employees", JSON.stringify(employees));
+    const addEmployee = async (newEmployee: Omit<Employee, "_id" | "id">) => {
+        try {
+            const res = await fetch('/api/employees', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newEmployee),
+            });
+            if (res.ok) {
+                const savedEmployee = await res.json();
+                setEmployees((prev) => [savedEmployee, ...prev]);
+            }
+        } catch (error) {
+            console.error("Failed to add employee", error);
+            throw error;
         }
-    }, [employees, isMounted]);
-
-    const addEmployee = (newEmployee: Omit<Employee, "id">) => {
-        const employee = { ...newEmployee, id: crypto.randomUUID() };
-        setEmployees((prev) => [...prev, employee]);
     };
 
-    const updateEmployee = (id: string, updatedEmployee: Partial<Employee>) => {
-        setEmployees((prev) => prev.map((e) => (e.id === id ? { ...e, ...updatedEmployee } : e)));
+    const updateEmployee = async (id: string, updatedEmployee: Partial<Employee>) => {
+        try {
+            // Handle both _id and id (fallback)
+            const targetId = id;
+
+            const res = await fetch(`/api/employees/${targetId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedEmployee),
+            });
+
+            if (res.ok) {
+                const savedEmployee = await res.json();
+                setEmployees((prev) => prev.map((emp) =>
+                    (emp._id === targetId || emp.id === targetId ? savedEmployee : emp)
+                ));
+            }
+        } catch (error) {
+            console.error("Failed to update employee", error);
+            throw error;
+        }
     };
 
-    const deleteEmployee = (id: string) => {
-        setEmployees((prev) => prev.filter((e) => e.id !== id));
+    const deleteEmployee = async (id: string) => {
+        try {
+            // Handle both _id and id (fallback)
+            const targetId = id;
+
+            const res = await fetch(`/api/employees/${targetId}`, {
+                method: 'DELETE',
+            });
+
+            if (res.ok) {
+                setEmployees((prev) => prev.filter((emp) => emp._id !== targetId && emp.id !== targetId));
+            }
+        } catch (error) {
+            console.error("Failed to delete employee", error);
+            throw error;
+        }
     };
 
     return (
-        <EmployeeContext.Provider value={{ employees, addEmployee, updateEmployee, deleteEmployee }}>
+        <EmployeeContext.Provider value={{ employees, addEmployee, updateEmployee, deleteEmployee, isLoading }}>
             {children}
         </EmployeeContext.Provider>
     );

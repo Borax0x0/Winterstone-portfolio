@@ -7,7 +7,7 @@ import { Plus, Search, Edit2, Trash2, Phone, Mail, UserCircle } from "lucide-rea
 import toast from "react-hot-toast";
 
 export default function TeamPage() {
-    const { employees, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
+    const { employees, addEmployee, updateEmployee, deleteEmployee, isLoading } = useEmployees();
 
     // UI State
     const [searchTerm, setSearchTerm] = useState("");
@@ -28,19 +28,19 @@ export default function TeamPage() {
         setIsModalOpen(true);
     };
 
-    const handleSave = (data: Omit<Employee, "id">) => {
+    const handleSave = async (data: Omit<Employee, "id" | "_id">) => {
         if (modalMode === "add") {
-            addEmployee(data);
+            await addEmployee(data);
             toast.success("Employee added successfully");
         } else if (modalMode === "edit" && selectedEmployee) {
-            updateEmployee(selectedEmployee.id, data);
+            await updateEmployee(selectedEmployee._id || selectedEmployee.id!, data);
             toast.success("Employee updated details");
         }
     };
 
-    const handleDelete = (id: string, name: string) => {
+    const handleDelete = async (id: string, name: string) => {
         if (confirm(`Are you sure you want to remove ${name}?`)) {
-            deleteEmployee(id);
+            await deleteEmployee(id);
             toast.success("Employee record deleted");
         }
     };
@@ -97,9 +97,18 @@ export default function TeamPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-stone-800">
-                            {filteredEmployees.length > 0 ? (
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan={5} className="px-6 py-12 text-center text-stone-500">
+                                        <div className="flex justify-center items-center gap-3">
+                                            <div className="animate-spin h-5 w-5 border-2 border-saffron border-t-transparent rounded-full"></div>
+                                            Loading Team Data...
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : filteredEmployees.length > 0 ? (
                                 filteredEmployees.map((emp) => (
-                                    <tr key={emp.id} className="hover:bg-stone-800/50 transition-colors">
+                                    <tr key={emp._id || emp.id} className="hover:bg-stone-800/50 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center text-stone-500">
@@ -114,8 +123,8 @@ export default function TeamPage() {
                                         <td className="px-6 py-4 font-medium text-white">{emp.role}</td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2 py-1 rounded-full text-[10px] uppercase font-bold tracking-wide ${emp.status === "Active" ? "bg-green-500/10 text-green-500" :
-                                                    emp.status === "On Leave" ? "bg-yellow-500/10 text-yellow-500" :
-                                                        "bg-red-500/10 text-red-500"
+                                                emp.status === "On Leave" ? "bg-yellow-500/10 text-yellow-500" :
+                                                    "bg-red-500/10 text-red-500"
                                                 }`}>
                                                 {emp.status}
                                             </span>
@@ -141,7 +150,7 @@ export default function TeamPage() {
                                                     <Edit2 size={14} />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(emp.id, emp.name)}
+                                                    onClick={() => handleDelete(emp._id || emp.id!, emp.name)}
                                                     className="p-2 bg-stone-800 hover:bg-red-500 hover:text-white rounded-md transition-colors"
                                                 >
                                                     <Trash2 size={14} />

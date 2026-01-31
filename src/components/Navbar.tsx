@@ -3,12 +3,16 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, X, CloudSnow, LayoutDashboard } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  Menu, X, CloudSnow, LayoutDashboard, Cloud, Sun, CloudRain, Wind,
+  ChevronDown, User, Calendar, LogOut, ArrowLeft
+} from "lucide-react";
+
 import { useAuth } from "@/context/AuthContext";
+import { useWeather } from "@/hooks/useWeather";
 import AuthModal from "@/components/AuthModal";
 import SignOutModal from "@/components/SignOutModal";
-import { ChevronDown, User, Calendar, LogOut, ArrowLeft } from "lucide-react";
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -16,9 +20,21 @@ export default function Navbar() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+
   const { user, logout } = useAuth();
+  const { weather, loading } = useWeather();
   const pathname = usePathname();
   const router = useRouter();
+
+  // Helper to get icon
+  const getWeatherIcon = (code: number, size: number = 16) => {
+    if (code === 0) return <Sun size={size} />;
+    if (code >= 1 && code <= 3) return <Cloud size={size} />;
+    if (code >= 51 && code <= 67) return <CloudRain size={size} />;
+    if (code >= 71 && code <= 77) return <CloudSnow size={size} />;
+    if (code >= 95) return <Wind size={size} />;
+    return <Sun size={size} />;
+  };
 
   const handleSignOutConfirm = () => {
     logout();
@@ -93,16 +109,19 @@ export default function Navbar() {
           <div className="flex items-center gap-6">
 
             {/* WEATHER PILL */}
-            <div className="hidden md:flex items-center gap-2 text-white/80 pr-4 border-r border-white/20">
-              <CloudSnow size={16} />
-              <span className="text-xs font-medium tracking-wider">-4°C</span>
-            </div>
+            {/* WEATHER PILL */}
+            {!loading && weather && (
+              <div className="hidden md:flex items-center gap-2 text-white/80 pr-4 border-r border-white/20">
+                {getWeatherIcon(weather.code)}
+                <span className="text-xs font-medium tracking-wider">{weather.temp}°C</span>
+              </div>
+            )}
 
             {/* AUTH & BOOK BUTTONS */}
             <div className="hidden sm:flex items-center gap-4">
               {user ? (
                 <div className="flex items-center gap-4">
-                  {user.role === "admin" && (
+                  {(user.role === "admin" || user.role === "superadmin") && (
                     <Link href="/admin" className="text-xs font-bold tracking-widest uppercase hover:text-saffron flex items-center gap-2">
                       <LayoutDashboard size={14} />
                       Admin
@@ -226,17 +245,31 @@ export default function Navbar() {
               </Link>
 
               {/* Mobile Weather Display */}
-              <div className="flex items-center gap-3 text-white/60">
-                <CloudSnow size={20} />
-                <span className="text-lg font-serif">-4°C • Heavy Snow</span>
-              </div>
+              {/* Mobile Weather Display */}
+              {!loading && weather && (
+                <div className="flex items-center gap-3 text-white/60">
+                  {getWeatherIcon(weather.code, 20)}
+                  <span className="text-lg font-serif">{weather.temp}°C • {weather.condition}</span>
+                </div>
+              )}
 
               <div className="w-12 h-[1px] bg-white/20 my-4"></div>
 
               {/* Mobile Auth Actions */}
               {user ? (
                 <div className="flex flex-col items-center gap-4">
-                  {user.role === 'admin' && (
+                  {/* Profile Link */}
+                  <Link
+                    href="/profile"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="text-sm font-bold tracking-widest uppercase hover:text-saffron flex items-center gap-2"
+                  >
+                    <User size={16} />
+                    My Profile
+                  </Link>
+
+                  {/* Admin Dashboard (if admin) */}
+                  {(user.role === 'admin' || user.role === 'superadmin') && (
                     <Link
                       href="/admin"
                       onClick={() => setIsMobileMenuOpen(false)}
@@ -246,6 +279,8 @@ export default function Navbar() {
                       Admin Dashboard
                     </Link>
                   )}
+
+                  {/* Sign Out */}
                   <button
                     onClick={() => { setIsMobileMenuOpen(false); setIsSignOutModalOpen(true); }}
                     className="text-sm font-bold tracking-widest uppercase text-red-400 hover:text-red-300 flex items-center gap-2"

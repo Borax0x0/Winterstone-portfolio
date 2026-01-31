@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Filter, Eye, XCircle, CheckCircle, Clock } from "lucide-react";
-import { Booking, BookingStatus, MOCK_BOOKINGS } from "./data";
+import { Search, Eye, XCircle, CheckCircle, Clock } from "lucide-react";
+import { useBookings, BookingStatus } from "@/context/BookingContext";
+import toast from "react-hot-toast";
 
 export default function BookingsPage() {
-    const [bookings, setBookings] = useState<Booking[]>(MOCK_BOOKINGS);
+    const { bookings, updateBookingStatus, isLoading } = useBookings();
     const [filterStatus, setFilterStatus] = useState<BookingStatus | "All">("All");
     const [searchTerm, setSearchTerm] = useState("");
 
@@ -14,13 +15,14 @@ export default function BookingsPage() {
         const matchesStatus = filterStatus === "All" || booking.status === filterStatus;
         const matchesSearch = booking.guestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             booking.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            booking.id.toLowerCase().includes(searchTerm.toLowerCase());
+            (booking._id || booking.id || "").toLowerCase().includes(searchTerm.toLowerCase());
         return matchesStatus && matchesSearch;
     });
 
-    const handleCancel = (id: string) => {
+    const handleCancel = async (id: string) => {
         if (confirm("Are you sure you want to cancel this booking?")) {
-            setBookings(prev => prev.map(b => b.id === id ? { ...b, status: "Cancelled" } : b));
+            await updateBookingStatus(id, "Cancelled");
+            toast.success("Booking cancelled");
         }
     };
 
@@ -101,11 +103,20 @@ export default function BookingsPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-stone-100">
-                            {filteredBookings.length > 0 ? (
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan={7} className="px-6 py-12 text-center text-stone-500">
+                                        <div className="flex justify-center items-center gap-3">
+                                            <div className="animate-spin h-5 w-5 border-2 border-saffron border-t-transparent rounded-full"></div>
+                                            Loading Bookings...
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : filteredBookings.length > 0 ? (
                                 filteredBookings.map((booking) => (
-                                    <tr key={booking.id} className="hover:bg-stone-50/50 transition-colors">
+                                    <tr key={booking._id || booking.id} className="hover:bg-stone-50/50 transition-colors">
                                         <td className="px-6 py-4 text-xs font-mono font-bold text-stone-600">
-                                            {booking.id}
+                                            {booking._id ? booking._id.slice(-6).toUpperCase() : booking.id}
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
@@ -138,7 +149,7 @@ export default function BookingsPage() {
                                                 </button>
                                                 {booking.status !== "Cancelled" && (
                                                     <button
-                                                        onClick={() => handleCancel(booking.id)}
+                                                        onClick={() => handleCancel(booking._id || booking.id!)}
                                                         className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
                                                         title="Cancel Booking"
                                                     >

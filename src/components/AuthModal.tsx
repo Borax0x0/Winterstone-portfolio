@@ -15,7 +15,6 @@ type AuthMode = "signin" | "signup" | "forgot-password";
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     const { login } = useAuth();
     const [authMode, setAuthMode] = useState<AuthMode>("signin");
-    const [activeTab, setActiveTab] = useState<"guest" | "admin">("guest");
 
     // Form States
     const [email, setEmail] = useState("");
@@ -56,7 +55,21 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 if (!email.includes("@")) {
                     throw new Error("Please enter a valid email");
                 }
-                setSuccessMsg(`Reset link sent to ${email}`);
+
+                // Call real reset password API
+                const response = await fetch('/api/auth/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to send reset link');
+                }
+
+                setSuccessMsg("If an account exists with this email, you'll receive a reset link. Check your console (dev) or email.");
                 setIsLoading(false);
                 return;
             }
@@ -65,29 +78,41 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 if (name.length < 2 || !email.includes("@") || password.length < 6) {
                     throw new Error("Please provide valid details (Password min 6 chars)");
                 }
-                // Simulate Registration
-                login(name, email, "guest");
+
+                // Call registration API
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Registration failed');
+                }
+
+                // Auto-login after successful signup
+                await login(name, email, "guest", password);
                 handleClose();
                 return;
             }
 
-            // Sign In Logic
-            if (activeTab === "admin") {
-                if (email === "admin@winterstone.com" && password === "admin123") {
-                    login("Admin User", email, "admin");
-                    handleClose();
-                } else {
-                    throw new Error("Invalid admin credentials");
-                }
-            } else {
-                if (name.length < 2 || !email.includes("@") || password.length < 1) { // Basic check for now
-                    throw new Error("Please enter valid details (Password required)");
-                }
-                login(name, email, "guest");
-                handleClose();
+            // Sign In Logic - both admin and guest use same DB-backed auth
+            if (!email.includes("@") || password.length < 1) {
+                throw new Error("Please enter valid email and password");
             }
+            await login("", email, "guest", password); // Role determined by DB
+            handleClose();
         } catch (err: any) {
-            setError(err.message);
+            console.error("Auth Fail:", err);
+            // Translate generic error if needed
+            if (err.message === "Invalid credentials") {
+                setError("Incorrect email or password");
+            } else {
+                setError(err.message || "Something went wrong not correct");
+            }
+        } finally {
             setIsLoading(false);
         }
     };
@@ -136,29 +161,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                     </p>
                                 </div>
 
-                                {/* TABS (Only for Sign In) */}
-                                {authMode === "signin" && (
-                                    <div className="flex mb-8 border-b border-stone-200">
-                                        <button
-                                            onClick={() => { setActiveTab("guest"); setError(""); }}
-                                            className={`flex-1 pb-4 text-xs font-bold tracking-widest uppercase transition-all ${activeTab === "guest"
-                                                ? "border-b-2 border-saffron text-stone-900"
-                                                : "text-stone-400 hover:text-stone-600"
-                                                }`}
-                                        >
-                                            Guest
-                                        </button>
-                                        <button
-                                            onClick={() => { setActiveTab("admin"); setError(""); }}
-                                            className={`flex-1 pb-4 text-xs font-bold tracking-widest uppercase transition-all ${activeTab === "admin"
-                                                ? "border-b-2 border-saffron text-stone-900"
-                                                : "text-stone-400 hover:text-stone-600"
-                                                }`}
-                                        >
-                                            Admin
-                                        </button>
-                                    </div>
-                                )}
+
 
                                 {/* FEEDBACK ALERTS */}
                                 <AnimatePresence>
@@ -189,8 +192,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                 {/* FORM */}
                                 <form onSubmit={handleSubmit} className="space-y-4">
 
-                                    {/* Name Field (Guest Signin & Signup) */}
-                                    {(authMode === "signup" || (authMode === "signin" && activeTab === "guest")) && (
+                                    {/* Name Field (Signup only) */}
+                                    {authMode === "signup" && (
                                         <div className="relative">
                                             <User className="absolute left-4 top-3.5 w-4 h-4 text-stone-400" />
                                             <input

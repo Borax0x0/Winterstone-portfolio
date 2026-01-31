@@ -1,26 +1,138 @@
 "use client";
 
-import React, { useState } from "react";
-import { User, Calendar, Save, LogOut, MapPin, Mail, Phone, Clock } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { User, Calendar, Save, MapPin, Mail, Phone, Loader2, CheckCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
+
+interface Booking {
+    _id: string;
+    guestName: string;
+    email: string;
+    roomName: string;
+    checkIn: string;
+    checkOut: string;
+    totalAmount: number;
+    status: "Confirmed" | "Pending" | "Cancelled";
+    paymentStatus: "Pending" | "Paid" | "Failed";
+    createdAt: string;
+}
 
 export default function ProfilePage() {
-    const { user, logout } = useAuth();
-    const router = useRouter();
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<"profile" | "bookings">("profile");
+    const [bookings, setBookings] = useState<Booking[]>([]);
+    const [isLoadingBookings, setIsLoadingBookings] = useState(false);
+    const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
+    const [error, setError] = useState("");
 
-    // Mock Form State
+    // Form State
     const [formData, setFormData] = useState({
-        name: user?.name || "Test User",
-        email: user?.email || "test@example.com",
-        phone: "+91 98765 43210",
-        address: "123 Alpine Road, Manali, HP"
+        name: "",
+        email: "",
+        phone: "",
+        address: ""
     });
 
-    const handleSave = () => {
-        alert("Profile updated successfully!");
+    // Fetch profile data on mount
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const res = await fetch('/api/profile');
+                if (res.ok) {
+                    const data = await res.json();
+                    setFormData({
+                        name: data.name || "",
+                        email: data.email || "",
+                        phone: data.phone || "",
+                        address: data.address || ""
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to fetch profile:", err);
+            } finally {
+                setIsLoadingProfile(false);
+            }
+        };
+
+        if (user) {
+            fetchProfile();
+        } else {
+            setIsLoadingProfile(false);
+        }
+    }, [user]);
+
+    // Fetch bookings when tab changes to bookings
+    useEffect(() => {
+        if (activeTab === "bookings" && user?.email) {
+            fetchUserBookings();
+        }
+    }, [activeTab, user?.email]);
+
+    const fetchUserBookings = async () => {
+        if (!user?.email) return;
+
+        setIsLoadingBookings(true);
+        try {
+            const res = await fetch(`/api/bookings/user?email=${encodeURIComponent(user.email)}`);
+            if (res.ok) {
+                const data = await res.json();
+                setBookings(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch bookings:", error);
+        } finally {
+            setIsLoadingBookings(false);
+        }
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        setError("");
+        setSaveSuccess(false);
+
+        try {
+            const res = await fetch('/api/profile', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: formData.name,
+                    phone: formData.phone,
+                    address: formData.address
+                })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to update profile');
+            }
+
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 3000);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const formatDate = (dateStr: string) => {
+        return new Date(dateStr).toLocaleDateString('en-IN', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    };
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case "Confirmed": return "bg-green-100 text-green-700";
+            case "Pending": return "bg-yellow-100 text-yellow-700";
+            case "Cancelled": return "bg-red-100 text-red-700";
+            default: return "bg-stone-100 text-stone-700";
+        }
     };
 
     if (!user) {
@@ -37,11 +149,11 @@ export default function ProfilePage() {
                 <h1 className="text-4xl font-serif font-bold text-white mb-10">My Account</h1>
 
                 <div className="flex flex-col md:flex-row gap-12">
-                    {/* SIDEBAR TABS */}
-                    <div className="w-full md:w-64 flex flex-col gap-2">
+                    {/* SIDEBAR TABS - Horizontal on mobile, Vertical on desktop */}
+                    <div className="w-full md:w-64 flex flex-row md:flex-col gap-2 overflow-x-auto pb-2 md:pb-0">
                         <button
                             onClick={() => setActiveTab("profile")}
-                            className={`flex items-center gap-3 px-6 py-4 text-xs font-bold tracking-widest uppercase transition-all border ${activeTab === "profile"
+                            className={`flex items-center gap-2 md:gap-3 px-4 md:px-6 py-3 md:py-4 text-xs font-bold tracking-widest uppercase transition-all border whitespace-nowrap ${activeTab === "profile"
                                 ? "bg-stone-50 border-saffron text-stone-900 ring-1 ring-saffron"
                                 : "bg-transparent border-stone-800 text-stone-400 hover:border-stone-600 hover:text-stone-200"
                                 }`}
@@ -51,7 +163,7 @@ export default function ProfilePage() {
                         </button>
                         <button
                             onClick={() => setActiveTab("bookings")}
-                            className={`flex items-center gap-3 px-6 py-4 text-xs font-bold tracking-widest uppercase transition-all border ${activeTab === "bookings"
+                            className={`flex items-center gap-2 md:gap-3 px-4 md:px-6 py-3 md:py-4 text-xs font-bold tracking-widest uppercase transition-all border whitespace-nowrap ${activeTab === "bookings"
                                 ? "bg-stone-50 border-saffron text-stone-900 ring-1 ring-saffron"
                                 : "bg-transparent border-stone-800 text-stone-400 hover:border-stone-600 hover:text-stone-200"
                                 }`}
@@ -87,8 +199,8 @@ export default function ProfilePage() {
                                             <input
                                                 type="email"
                                                 value={formData.email}
-                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                className="w-full pl-12 pr-4 py-3 bg-stone-50 border border-stone-200 focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron text-sm"
+                                                disabled
+                                                className="w-full pl-12 pr-4 py-3 bg-stone-100 border border-stone-200 text-sm text-stone-500 cursor-not-allowed"
                                             />
                                         </div>
                                     </div>
@@ -118,48 +230,81 @@ export default function ProfilePage() {
                                     </div>
                                 </div>
 
+                                {/* Error Message */}
+                                {error && (
+                                    <div className="text-red-500 text-sm mt-4">{error}</div>
+                                )}
+
+                                {/* Success Message */}
+                                {saveSuccess && (
+                                    <div className="flex items-center gap-2 text-green-600 text-sm mt-4">
+                                        <CheckCircle size={16} />
+                                        Profile updated successfully!
+                                    </div>
+                                )}
+
                                 <button
                                     onClick={handleSave}
-                                    className="bg-stone-900 text-white px-8 py-4 text-xs font-bold tracking-widest uppercase hover:bg-saffron hover:text-stone-900 transition-colors flex items-center gap-2 mt-4"
+                                    disabled={isSaving}
+                                    className="bg-stone-900 text-white px-8 py-4 text-xs font-bold tracking-widest uppercase hover:bg-saffron hover:text-stone-900 transition-colors flex items-center gap-2 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <Save size={16} />
-                                    Save Changes
+                                    {isSaving ? (
+                                        <Loader2 size={16} className="animate-spin" />
+                                    ) : (
+                                        <Save size={16} />
+                                    )}
+                                    {isSaving ? "Saving..." : "Save Changes"}
                                 </button>
                             </div>
                         ) : (
                             <div className="space-y-8">
                                 <h2 className="text-2xl font-bold font-serif text-stone-900 border-b border-stone-200 pb-4">My Bookings</h2>
 
-                                {/* MOCK BOOKING ITEM */}
-                                <div className="border border-stone-200 rounded-sm p-6 flex flex-col md:flex-row gap-8 bg-stone-50 hover:bg-stone-100 transition-colors">
-                                    <div className="w-full md:w-48 h-32 bg-stone-200 relative overflow-hidden">
-                                        <div className="absolute inset-0 bg-stone-300 animate-pulse" /> {/* Placeholder Image */}
+                                {isLoadingBookings ? (
+                                    <div className="flex items-center justify-center py-16">
+                                        <Loader2 className="w-8 h-8 animate-spin text-saffron" />
                                     </div>
-                                    <div className="flex-1 space-y-4">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <h3 className="font-serif font-bold text-xl text-stone-900">Skyline Haven</h3>
-                                                <p className="text-xs text-stone-500 uppercase tracking-wider mt-1">Booking ID: #WIN-8821</p>
-                                            </div>
-                                            <span className="bg-green-100 text-green-700 text-[10px] font-bold px-3 py-1.5 uppercase tracking-wider rounded-full">Confirmed</span>
-                                        </div>
-
-                                        <div className="flex gap-6 text-sm text-stone-600">
-                                            <div className="flex items-center gap-2">
-                                                <Calendar size={14} className="text-saffron" />
-                                                <span>Jan 24 - Jan 26, 2026</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <User size={14} className="text-saffron" />
-                                                <span>2 Guests</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="pt-2">
-                                            <button className="text-xs font-bold text-stone-900 underline decoration-1 underline-offset-4 hover:text-saffron transition-colors">View Details</button>
-                                        </div>
+                                ) : bookings.length === 0 ? (
+                                    <div className="text-center py-16 text-stone-500">
+                                        <Calendar className="w-12 h-12 mx-auto mb-4 text-stone-300" />
+                                        <p>No bookings yet.</p>
+                                        <p className="text-sm mt-2">When you make a reservation, it will appear here.</p>
                                     </div>
-                                </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {bookings.map((booking) => (
+                                            <div
+                                                key={booking._id}
+                                                className="border border-stone-200 rounded-sm p-6 bg-stone-50 hover:bg-stone-100 transition-colors"
+                                            >
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div>
+                                                        <h3 className="font-serif font-bold text-xl text-stone-900">{booking.roomName}</h3>
+                                                        <p className="text-xs text-stone-500 uppercase tracking-wider mt-1">
+                                                            Booking ID: #{booking._id.slice(-8).toUpperCase()}
+                                                        </p>
+                                                    </div>
+                                                    <span className={`text-[10px] font-bold px-3 py-1.5 uppercase tracking-wider rounded-full ${getStatusColor(booking.status)}`}>
+                                                        {booking.status}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex flex-wrap gap-6 text-sm text-stone-600">
+                                                    <div className="flex items-center gap-2">
+                                                        <Calendar size={14} className="text-saffron" />
+                                                        <span>{formatDate(booking.checkIn)} - {formatDate(booking.checkOut)}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-semibold">₹{booking.totalAmount.toLocaleString()}</span>
+                                                        <span className={`text-[10px] px-2 py-0.5 rounded ${booking.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                                            {booking.paymentStatus}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -168,3 +313,4 @@ export default function ProfilePage() {
         </main>
     );
 }
+

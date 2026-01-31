@@ -8,7 +8,7 @@ import { Event } from "@/context/EventContext";
 interface EventModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (eventData: Omit<Event, "id">) => void;
+    onSubmit: (eventData: Omit<Event, "id" | "_id">) => void;
     initialData?: Event; // If provided, we are in Edit mode
     title: string;
 }
