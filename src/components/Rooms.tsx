@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
@@ -50,10 +51,11 @@ const Rooms = () => {
             className="snap-center shrink-0 w-[85vw] md:w-[600px] group relative"
           >
             <div className="h-[400px] md:h-[500px] overflow-hidden rounded-sm relative">
-              <img
+              <Image
                 src={room.image}
                 alt={room.name}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                fill
+                className="object-cover transition-transform duration-700 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-all" />
             </div>

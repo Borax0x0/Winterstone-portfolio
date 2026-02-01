@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
         if (mock) {
             // If this was a mock transaction, just approve it
-            const booking = await Booking.findByIdAndUpdate(bookingId, {
+            await Booking.findByIdAndUpdate(bookingId, {
                 status: 'Confirmed',
                 paymentStatus: 'Paid',
                 razorpayOrderId: razorpay_order_id,
@@ -59,8 +59,9 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: "Invalid signature", success: false }, { status: 400 });
         }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Payment Verification Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : "Payment verification failed";
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

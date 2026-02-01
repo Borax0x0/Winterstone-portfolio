@@ -35,9 +35,10 @@ export async function GET(request: Request) {
             email: user.email,
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Check verification error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Check verification failed';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
 
@@ -90,8 +91,9 @@ export async function POST(request: Request) {
                 : 'Email service unavailable. Check console for link.',
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Resend verification error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Resend verification failed';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

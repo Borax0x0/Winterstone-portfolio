@@ -3,13 +3,19 @@ import { auth } from '@/auth';
 import dbConnect from '@/lib/db';
 import Booking from '@/models/Booking';
 
+interface SessionUser {
+    email?: string | null;
+    role?: string;
+}
+
 // GET all bookings (admin only)
 export async function GET() {
     try {
         const session = await auth();
         
         // Only admin/superadmin can view all bookings
-        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+        const userRole = (session?.user as SessionUser | undefined)?.role;
+        if (!session?.user || !userRole || !['admin', 'superadmin'].includes(userRole)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -40,7 +46,8 @@ export async function POST(request: Request) {
         // Ensure the booking email matches the logged-in user (prevent booking for others)
         if (body.email && body.email.toLowerCase() !== session.user.email?.toLowerCase()) {
             // Allow admins to create bookings for anyone
-            if (!['admin', 'superadmin'].includes((session.user as any).role)) {
+            const userRole = (session.user as SessionUser).role;
+            if (!userRole || !['admin', 'superadmin'].includes(userRole)) {
                 return NextResponse.json({ error: 'Cannot create booking for another user' }, { status: 403 });
             }
         }

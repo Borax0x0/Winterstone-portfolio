@@ -3,6 +3,11 @@ import { auth } from '@/auth';
 import dbConnect from '@/lib/db';
 import Event from '@/models/Event';
 
+interface SessionUser {
+    email?: string | null;
+    role?: string;
+}
+
 interface Params {
     params: Promise<{
         id: string;
@@ -16,7 +21,8 @@ export async function PUT(request: Request, props: Params) {
         const session = await auth();
         
         // Only admin/superadmin can update events
-        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+        const userRole = (session?.user as SessionUser | undefined)?.role;
+        if (!session?.user || !userRole || !['admin', 'superadmin'].includes(userRole)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -47,7 +53,8 @@ export async function DELETE(request: Request, props: Params) {
         const session = await auth();
         
         // Only admin/superadmin can delete events
-        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+        const userRole = (session?.user as SessionUser | undefined)?.role;
+        if (!session?.user || !userRole || !['admin', 'superadmin'].includes(userRole)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 

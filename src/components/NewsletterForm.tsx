@@ -44,9 +44,10 @@ export default function NewsletterForm({ variant = "vertical" }: NewsletterFormP
             setMessage(data.message);
             setEmail("");
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             setStatus("error");
-            setMessage(error.message || "Something went wrong");
+            const errorMessage = error instanceof Error ? error.message : "Something went wrong";
+            setMessage(errorMessage);
         }
     };
 

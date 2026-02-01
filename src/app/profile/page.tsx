@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { User, Calendar, Save, MapPin, Mail, Phone, Loader2, CheckCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -22,7 +22,6 @@ export default function ProfilePage() {
     const [activeTab, setActiveTab] = useState<"profile" | "bookings">("profile");
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [isLoadingBookings, setIsLoadingBookings] = useState(false);
-    const [isLoadingProfile, setIsLoadingProfile] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [error, setError] = useState("");
@@ -52,25 +51,17 @@ export default function ProfilePage() {
             } catch (err) {
                 console.error("Failed to fetch profile:", err);
             } finally {
-                setIsLoadingProfile(false);
+                // Profile loading complete
             }
         };
 
         if (user) {
             fetchProfile();
-        } else {
-            setIsLoadingProfile(false);
         }
     }, [user]);
 
     // Fetch bookings when tab changes to bookings
-    useEffect(() => {
-        if (activeTab === "bookings" && user?.email) {
-            fetchUserBookings();
-        }
-    }, [activeTab, user?.email]);
-
-    const fetchUserBookings = async () => {
+    const fetchUserBookings = useCallback(async () => {
         if (!user?.email) return;
 
         setIsLoadingBookings(true);
@@ -85,7 +76,13 @@ export default function ProfilePage() {
         } finally {
             setIsLoadingBookings(false);
         }
-    };
+    }, [user?.email]);
+
+    useEffect(() => {
+        if (activeTab === "bookings" && user?.email) {
+            fetchUserBookings();
+        }
+    }, [activeTab, user?.email, fetchUserBookings]);
 
     const handleSave = async () => {
         setIsSaving(true);
@@ -111,8 +108,9 @@ export default function ProfilePage() {
 
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 3000);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to update profile';
+            setError(errorMessage);
         } finally {
             setIsSaving(false);
         }

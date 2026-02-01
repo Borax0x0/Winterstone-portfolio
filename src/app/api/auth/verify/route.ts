@@ -32,7 +32,7 @@ export async function GET(request: Request) {
         // Return success JSON
         return NextResponse.json({ verified: true, email: user.email });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Verification error:', error);
         return NextResponse.json({ error: 'verification_failed' }, { status: 500 });
     }

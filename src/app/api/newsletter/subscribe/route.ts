@@ -59,11 +59,11 @@ export async function POST(request: Request) {
             alreadySubscribed: false,
         }, { status: 201 });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Newsletter subscription error:', error);
 
         // Handle MongoDB duplicate key error (race condition)
-        if (error.code === 11000) {
+        if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
             return NextResponse.json({
                 message: "You're subscribed! Thanks for joining.",
                 alreadySubscribed: true,
@@ -87,7 +87,7 @@ export async function GET() {
         await dbConnect();
         const count = await Subscriber.countDocuments({ active: true });
         return NextResponse.json({ subscriberCount: count });
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Failed to get count' }, { status: 500 });
     }
 }

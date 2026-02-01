@@ -4,6 +4,11 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Users, Shield, ShieldCheck, User, Trash2, Loader2, AlertCircle } from "lucide-react";
 
+interface SessionUser {
+    email?: string | null;
+    role?: string;
+}
+
 interface UserData {
     _id: string;
     email: string;
@@ -34,7 +39,7 @@ export default function AdminUsersPage() {
             } else {
                 setError(data.error || 'Failed to fetch users');
             }
-        } catch (err) {
+        } catch {
             setError('Failed to fetch users');
         } finally {
             setIsLoading(false);
@@ -57,7 +62,7 @@ export default function AdminUsersPage() {
             } else {
                 alert(data.error || 'Failed to update role');
             }
-        } catch (err) {
+        } catch {
             alert('Failed to update role');
         } finally {
             setActionLoading(null);
@@ -76,7 +81,7 @@ export default function AdminUsersPage() {
             } else {
                 alert(data.error || 'Failed to delete user');
             }
-        } catch (err) {
+        } catch {
             alert('Failed to delete user');
         } finally {
             setActionLoading(null);
@@ -101,7 +106,8 @@ export default function AdminUsersPage() {
     };
 
     // Check if current user is superadmin
-    if ((session?.user as any)?.role !== 'superadmin') {
+    const userRole = (session?.user as SessionUser | undefined)?.role;
+    if (userRole !== 'superadmin') {
         return (
             <div className="flex flex-col items-center justify-center h-96 text-stone-500">
                 <AlertCircle className="w-12 h-12 mb-4" />

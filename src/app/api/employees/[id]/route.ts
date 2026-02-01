@@ -3,6 +3,11 @@ import { auth } from '@/auth';
 import dbConnect from '@/lib/db';
 import Employee from '@/models/Employee';
 
+interface SessionUser {
+    email?: string | null;
+    role?: string;
+}
+
 interface Params {
     params: Promise<{
         id: string;
@@ -15,7 +20,8 @@ export async function PUT(request: Request, props: Params) {
     try {
         // Auth check - admin only
         const session = await auth();
-        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+        const userRole = (session?.user as SessionUser | undefined)?.role;
+        if (!session?.user || !userRole || !['admin', 'superadmin'].includes(userRole)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -33,7 +39,7 @@ export async function PUT(request: Request, props: Params) {
         }
 
         return NextResponse.json(updatedEmployee);
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Failed to update employee' }, { status: 500 });
     }
 }
@@ -44,7 +50,8 @@ export async function DELETE(request: Request, props: Params) {
     try {
         // Auth check - admin only
         const session = await auth();
-        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+        const userRole = (session?.user as SessionUser | undefined)?.role;
+        if (!session?.user || !userRole || !['admin', 'superadmin'].includes(userRole)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -57,7 +64,7 @@ export async function DELETE(request: Request, props: Params) {
         }
 
         return NextResponse.json({ message: 'Employee deleted successfully' });
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Failed to delete employee' }, { status: 500 });
     }
 }

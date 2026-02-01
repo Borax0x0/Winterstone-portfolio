@@ -1,8 +1,6 @@
 
 import { NextResponse } from 'next/server';
 import Razorpay from 'razorpay';
-import dbConnect from '@/lib/db';
-import Booking from '@/models/Booking';
 
 export async function POST(request: Request) {
     try {
@@ -44,8 +42,9 @@ export async function POST(request: Request) {
         // but we usually do it after payment success or just pass it to frontend
 
         return NextResponse.json(order);
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Razorpay Order Creation Error:", error);
-        return NextResponse.json({ error: error.message || "Something went wrong" }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : "Something went wrong";
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

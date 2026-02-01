@@ -3,6 +3,11 @@ import { auth } from '@/auth';
 import dbConnect from '@/lib/db';
 import Booking from '@/models/Booking';
 
+interface SessionUser {
+    email?: string | null;
+    role?: string;
+}
+
 interface Params {
     params: Promise<{
         id: string;
@@ -28,7 +33,8 @@ export async function PUT(request: Request, props: Params) {
             return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
         }
 
-        const isAdmin = ['admin', 'superadmin'].includes((session.user as any).role);
+        const userRole = (session.user as SessionUser).role;
+        const isAdmin = userRole ? ['admin', 'superadmin'].includes(userRole) : false;
         const isOwner = existingBooking.email.toLowerCase() === session.user.email?.toLowerCase();
 
         // Only admin can update, or owner can cancel their own booking
@@ -70,7 +76,12 @@ export async function DELETE(request: Request, props: Params) {
         const session = await auth();
         
         // Only admin can delete bookings
-        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+        if (!session?.user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        
+        const userRole = (session.user as SessionUser).role;
+        if (!userRole || !['admin', 'superadmin'].includes(userRole)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 

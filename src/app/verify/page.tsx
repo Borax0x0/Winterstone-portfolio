@@ -4,24 +4,36 @@ import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 
 import { useState, useEffect } from "react"; // Added hooks
+
+type VerificationStatus = 'loading' | 'success' | 'error';
+
+interface VerificationState {
+    initialStatus: VerificationStatus;
+    initialError: string;
+}
 
 function VerifyContent() {
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
 
+    // Derive initial state based on token presence (avoids setState in effect)
+    const { initialStatus, initialError } = useMemo<VerificationState>(() => {
+        if (!token) {
+            return { initialStatus: 'error', initialError: 'missing_token' };
+        }
+        return { initialStatus: 'loading', initialError: '' };
+    }, [token]);
+
     // Local state for verification status
-    const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-    const [errorMessage, setErrorMessage] = useState("");
+    const [status, setStatus] = useState<VerificationStatus>(initialStatus);
+    const [errorMessage, setErrorMessage] = useState(initialError);
 
     useEffect(() => {
-        if (!token) {
-            setStatus('error');
-            setErrorMessage("missing_token");
-            return;
-        }
+        // Skip if no token (already handled by initial state)
+        if (!token) return;
 
         const verifyToken = async () => {
             try {
@@ -34,7 +46,7 @@ function VerifyContent() {
                     setStatus('error');
                     setErrorMessage(data.error || "verification_failed");
                 }
-            } catch (error) {
+            } catch {
                 setStatus('error');
                 setErrorMessage("verification_failed");
             }

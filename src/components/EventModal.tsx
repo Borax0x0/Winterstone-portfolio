@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Calendar, Type, FileText, Image as ImageIcon, Loader2 } from "lucide-react";
+import { X, Calendar, Type, FileText, Image as ImageIcon, Loader2, Upload } from "lucide-react";
 import { Event } from "@/context/EventContext";
 
 interface EventModalProps {
@@ -13,33 +14,53 @@ interface EventModalProps {
     title: string;
 }
 
-export default function EventModal({ isOpen, onClose, onSubmit, initialData, title }: EventModalProps) {
-    const [formData, setFormData] = useState({
-        title: "",
-        date: "",
-        desc: "",
-        image: "/event-dj.jpg" // Default placeholder
-    });
-    const [isLoading, setIsLoading] = useState(false);
+interface FormData {
+    title: string;
+    date: string;
+    desc: string;
+    image: string;
+}
 
-    useEffect(() => {
+// Helper to get default form data
+const getDefaultFormData = (): FormData => ({
+    title: "",
+    date: "",
+    desc: "",
+    image: "" // No default image
+});
+
+// Helper to get form data from initial data
+const getFormDataFromEvent = (event: Event): FormData => ({
+    title: event.title,
+    date: event.date,
+    desc: event.desc,
+    image: event.image
+});
+
+export default function EventModal({ isOpen, onClose, onSubmit, initialData, title }: EventModalProps) {
+    // Compute initial form data based on props (avoids setState in effect)
+    const computedInitialData = useMemo<FormData>(() => {
         if (initialData) {
-            setFormData({
-                title: initialData.title,
-                date: initialData.date,
-                desc: initialData.desc,
-                image: initialData.image
-            });
-        } else {
-            // Reset for Add Mode
-            setFormData({
-                title: "",
-                date: "",
-                desc: "",
-                image: "/event-dj.jpg"
-            });
+            return getFormDataFromEvent(initialData);
         }
-    }, [initialData, isOpen]);
+        return getDefaultFormData();
+    }, [initialData]);
+
+    const [formData, setFormData] = useState<FormData>(computedInitialData);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+
+    // Reset form when modal opens/closes or initialData changes
+    const modalKey = initialData?._id || initialData?.id || 'new';
+    
+    // Update form data when initialData changes
+    React.useEffect(() => {
+        if (initialData) {
+            setFormData(getFormDataFromEvent(initialData));
+        } else if (isOpen) {
+            setFormData(getDefaultFormData());
+        }
+    }, [modalKey, isOpen, initialData]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -49,6 +70,35 @@ export default function EventModal({ isOpen, onClose, onSubmit, initialData, tit
         onSubmit(formData);
         setIsLoading(false);
         onClose();
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        const uploadFormData = new FormData();
+        uploadFormData.append('image', file);
+
+        try {
+            const res = await fetch('/api/events/upload', {
+                method: 'POST',
+                body: uploadFormData,
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || 'Upload failed');
+            }
+
+            setFormData(prev => ({ ...prev, image: data.imageUrl }));
+        } catch (error) {
+            console.error('Upload error:', error);
+            alert('Failed to upload image');
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     return (
@@ -110,6 +160,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, initialData, tit
                                         <input
                                             type="date"
                                             required
+                                            min={new Date().toISOString().split('T')[0]}
                                             value={formData.date}
                                             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                                             className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-200 text-sm focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron transition-all rounded-sm"
@@ -133,20 +184,59 @@ export default function EventModal({ isOpen, onClose, onSubmit, initialData, tit
                                     </div>
                                 </div>
 
-                                {/* Image URL */}
+                                {/* Event Image Upload */}
                                 <div>
-                                    <label className="block text-xs font-bold tracking-widest uppercase text-stone-500 mb-2">Image URL</label>
-                                    <div className="relative">
-                                        <ImageIcon className="absolute left-4 top-3.5 w-4 h-4 text-stone-400" />
-                                        <input
-                                            type="text"
-                                            value={formData.image}
-                                            onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                                            className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-200 text-sm focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron transition-all rounded-sm"
-                                            placeholder="/event-default.jpg"
-                                        />
+                                    <label className="block text-xs font-bold tracking-widest uppercase text-stone-500 mb-2">Event Image</label>
+                                    <div className="space-y-4">
+                                        
+                                        {/* Image Preview Area */}
+                                        <div className="relative w-full h-48 bg-stone-100 rounded-sm overflow-hidden border border-stone-200 flex items-center justify-center group">
+                                            {formData.image ? (
+                                                <>
+                                                    <Image 
+                                                        src={formData.image} 
+                                                        alt="Preview" 
+                                                        fill 
+                                                        className="object-cover" 
+                                                    />
+                                                    {/* Hover Overlay */}
+                                                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <p className="text-white text-xs font-bold uppercase tracking-widest">Current Image</p>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="flex flex-col items-center text-stone-400">
+                                                    <ImageIcon size={32} className="mb-2 opacity-50" />
+                                                    <span className="text-xs">No image selected</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Upload Button */}
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <label className={`cursor-pointer flex items-center gap-2 ${isUploading ? 'bg-stone-100 text-stone-400 cursor-not-allowed' : 'bg-stone-900 text-white hover:bg-saffron hover:text-stone-900'} px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-widest transition-colors`}>
+                                                    <Upload size={14} />
+                                                    {isUploading ? "Uploading..." : "Upload New Image"}
+                                                    <input 
+                                                        type="file" 
+                                                        accept="image/*" 
+                                                        className="hidden" 
+                                                        onChange={handleImageUpload}
+                                                        disabled={isUploading}
+                                                    />
+                                                </label>
+                                                <span className="text-[10px] text-stone-400">Max 5MB</span>
+                                            </div>
+                                            
+                                            {/* Optional: Show filename if it's a local path */}
+                                            {formData.image && (
+                                                <p className="text-[10px] text-stone-400 truncate max-w-[150px]">
+                                                    {formData.image.split('/').pop()}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
-                                    <p className="text-[10px] text-stone-400 mt-1">Use a public URL or local path like <code>/event-dj.jpg</code></p>
                                 </div>
 
                                 {/* Submit */}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext } from "react";
 import { SessionProvider, useSession, signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -9,6 +9,12 @@ interface User {
     name: string;
     email: string;
     role: "guest" | "admin" | "superadmin";
+}
+
+interface SessionUser {
+    name?: string | null;
+    email?: string | null;
+    role?: "guest" | "admin" | "superadmin";
 }
 
 interface AuthContextType {
@@ -27,7 +33,7 @@ function AuthContextContent({ children }: { children: React.ReactNode }) {
     const user: User | null = session?.user ? {
         name: session.user.name || "",
         email: session.user.email || "",
-        role: (session.user as any).role || "guest"
+        role: (session.user as SessionUser).role || "guest"
     } : null;
 
     const login = async (name: string, email: string, role: "guest" | "admin" | "superadmin", password?: string) => {

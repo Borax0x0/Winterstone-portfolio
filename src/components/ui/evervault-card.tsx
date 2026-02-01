@@ -1,6 +1,6 @@
 "use client";
-import { useMotionValue } from "framer-motion";
-import React, { useState, useEffect } from "react";
+import { MotionValue, useMotionValue } from "framer-motion";
+import React, { useState } from "react";
 import { useMotionTemplate, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -14,17 +14,13 @@ export const EvervaultCard = ({
     const mouseX = useMotionValue(0);
     const mouseY = useMotionValue(0);
 
-    const [randomString, setRandomString] = useState("");
+    // Use lazy initial state to avoid useEffect + setState anti-pattern
+    const [randomString, setRandomString] = useState(() => generateRandomString(1500));
 
-    useEffect(() => {
-        const str = generateRandomString(1500);
-        setRandomString(str);
-    }, []);
-
-    function onMouseMove({ currentTarget, clientX, clientY }: any) {
-        const { left, top } = currentTarget.getBoundingClientRect();
-        mouseX.set(clientX - left);
-        mouseY.set(clientY - top);
+    function onMouseMove(event: React.MouseEvent<HTMLDivElement>) {
+        const { left, top } = event.currentTarget.getBoundingClientRect();
+        mouseX.set(event.clientX - left);
+        mouseY.set(event.clientY - top);
 
         const str = generateRandomString(1500);
         setRandomString(str);
@@ -59,7 +55,11 @@ export const EvervaultCard = ({
     );
 };
 
-export function CardPattern({ mouseX, mouseY, randomString }: any) {
+export function CardPattern({ mouseX, mouseY, randomString }: { 
+    mouseX: MotionValue<number>; 
+    mouseY: MotionValue<number>; 
+    randomString: string;
+}) {
     const maskImage = useMotionTemplate`radial-gradient(250px at ${mouseX}px ${mouseY}px, white, transparent)`;
     const style = { maskImage, WebkitMaskImage: maskImage };
 
@@ -92,7 +92,7 @@ export const generateRandomString = (length: number) => {
     return result;
 };
 
-export const Icon = ({ className, ...rest }: any) => {
+export const Icon = ({ className, ...rest }: React.SVGProps<SVGSVGElement>) => {
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"

@@ -1,6 +1,10 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
+interface SessionUser {
+    role?: string;
+}
+
 export default auth((req) => {
     const isLoggedIn = !!req.auth;
     const isAdminPath = req.nextUrl.pathname.startsWith("/admin");
@@ -17,7 +21,7 @@ export default auth((req) => {
         }
 
         // Check Role - allow both admin and superadmin
-        const userRole = (req.auth?.user as any)?.role;
+        const userRole = (req.auth?.user as SessionUser | undefined)?.role;
         if (userRole !== "admin" && userRole !== "superadmin") {
             // Redirect non-admins to home or show unauthorized
             return NextResponse.redirect(new URL("/", req.nextUrl));
@@ -26,7 +30,7 @@ export default auth((req) => {
 
     // Redirect to admin if already logged in and trying to access login
     if (isLoginRoute && isLoggedIn) {
-        const userRole = (req.auth?.user as any)?.role;
+        const userRole = (req.auth?.user as SessionUser | undefined)?.role;
         if (userRole === "admin" || userRole === "superadmin") {
             return NextResponse.redirect(new URL("/admin", req.nextUrl));
         }

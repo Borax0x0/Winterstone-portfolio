@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import { Check, Home, Download, Printer } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Check, Home } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -23,8 +22,6 @@ interface InvoiceModalProps {
 }
 
 export default function InvoiceModal({ isOpen, bookingDetails }: InvoiceModalProps) {
-    const router = useRouter();
-
     if (!isOpen || !bookingDetails) return null;
 
     return (

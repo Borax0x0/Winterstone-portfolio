@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Star, Loader2, MessageSquare } from "lucide-react";
 
 /**
@@ -28,11 +28,7 @@ export default function ReviewsList({ roomSlug, refreshTrigger }: ReviewsListPro
     const [averageRating, setAverageRating] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        fetchReviews();
-    }, [roomSlug, refreshTrigger]);
-
-    const fetchReviews = async () => {
+    const fetchReviews = useCallback(async () => {
         setIsLoading(true);
         try {
             const res = await fetch(`/api/reviews?room=${roomSlug}`);
@@ -46,7 +42,11 @@ export default function ReviewsList({ roomSlug, refreshTrigger }: ReviewsListPro
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [roomSlug]);
+
+    useEffect(() => {
+        fetchReviews();
+    }, [roomSlug, refreshTrigger, fetchReviews]);
 
     // Render star rating (static, display-only)
     const renderStars = (rating: number) => {

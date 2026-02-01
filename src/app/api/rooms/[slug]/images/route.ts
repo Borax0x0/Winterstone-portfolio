@@ -6,6 +6,11 @@ import { writeFile, unlink, mkdir } from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
 
+interface SessionUser {
+    email?: string | null;
+    role?: string;
+}
+
 // POST upload image (admin only)
 export async function POST(
     request: Request,
@@ -15,7 +20,8 @@ export async function POST(
         const session = await auth();
         
         // Check if user is admin or superadmin
-        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+        const userRole = (session?.user as SessionUser | undefined)?.role;
+        if (!session?.user || !userRole || !['admin', 'superadmin'].includes(userRole)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -102,7 +108,8 @@ export async function DELETE(
         const session = await auth();
         
         // Check if user is admin or superadmin
-        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+        const userRole = (session?.user as SessionUser | undefined)?.role;
+        if (!session?.user || !userRole || !['admin', 'superadmin'].includes(userRole)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 

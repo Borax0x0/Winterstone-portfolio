@@ -18,8 +18,9 @@ export default function LoginPage() {
 
         try {
             await login("Admin User", email, "admin", password);
-        } catch (err: any) {
-            setError(err.message || "Invalid credentials. Try admin@winterstone.com / admin123");
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : "Invalid credentials. Try admin@winterstone.com / admin123";
+            setError(errorMessage);
             setIsLoading(false);
         }
     };

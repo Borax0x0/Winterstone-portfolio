@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Plus, Pencil, Trash2, Image, X, Upload, GripVertical, Save } from "lucide-react";
+import Image from "next/image";
+import { Plus, Pencil, Trash2, Image as ImageIcon, X, Upload, Save } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface Room {
@@ -48,7 +49,7 @@ export default function RoomsPage() {
                 const data = await res.json();
                 setRooms(data);
             }
-        } catch (error) {
+        } catch {
             toast.error('Failed to fetch rooms');
         } finally {
             setIsLoading(false);
@@ -121,8 +122,9 @@ export default function RoomsPage() {
             }
             setIsModalOpen(false);
             fetchRooms();
-        } catch (error: any) {
-            toast.error(error.message || 'Failed to save room');
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to save room';
+            toast.error(errorMessage);
         }
     };
 
@@ -136,7 +138,7 @@ export default function RoomsPage() {
             if (!res.ok) throw new Error('Failed to delete');
             toast.success('Room deleted');
             fetchRooms();
-        } catch (error) {
+        } catch {
             toast.error('Failed to delete room');
         }
     };
@@ -177,8 +179,9 @@ export default function RoomsPage() {
             
             toast.success('Image uploaded successfully');
             fetchRooms();
-        } catch (error: any) {
-            toast.error(error.message || 'Failed to upload image');
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
+            toast.error(errorMessage);
         } finally {
             setUploadingImage(false);
         }
@@ -206,8 +209,9 @@ export default function RoomsPage() {
             }));
             toast.success('Image removed');
             fetchRooms();
-        } catch (error: any) {
-            toast.error(error.message || 'Failed to remove image');
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to remove image';
+            toast.error(errorMessage);
         }
     };
 
@@ -254,7 +258,7 @@ export default function RoomsPage() {
                 </div>
             ) : rooms.length === 0 ? (
                 <div className="bg-white rounded-lg border border-stone-200 p-12 text-center">
-                    <Image size={48} className="mx-auto text-stone-300 mb-4" />
+                    <ImageIcon size={48} className="mx-auto text-stone-300 mb-4" />
                     <h3 className="text-lg font-bold text-stone-700 mb-2">No Rooms Yet</h3>
                     <p className="text-stone-500 mb-6">Create your first room to get started</p>
                     <button
@@ -273,10 +277,11 @@ export default function RoomsPage() {
                         >
                             {/* Room Image */}
                             <div className="relative h-48 bg-stone-100">
-                                <img
+                                <Image
                                     src={room.heroImage}
                                     alt={room.name}
-                                    className="w-full h-full object-cover"
+                                    fill
+                                    className="object-cover"
                                 />
                                 {!room.isActive && (
                                     <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
@@ -453,11 +458,12 @@ export default function RoomsPage() {
                                     Hero Image (Main Cover)
                                 </label>
                                 <div className="flex gap-4 items-start">
-                                    <div className="w-48 h-32 bg-stone-100 rounded-lg overflow-hidden border border-stone-200">
-                                        <img
+                                    <div className="w-48 h-32 bg-stone-100 rounded-lg overflow-hidden border border-stone-200 relative">
+                                        <Image
                                             src={formData.heroImage || '/placeholder-room.jpg'}
                                             alt="Hero"
-                                            className="w-full h-full object-cover"
+                                            fill
+                                            className="object-cover"
                                         />
                                     </div>
                                     <div className="flex-1">
@@ -508,11 +514,12 @@ export default function RoomsPage() {
                                 <div className="grid grid-cols-3 gap-3">
                                     {formData.gallery.map((img, index) => (
                                         <div key={index} className="relative group">
-                                            <div className="aspect-video bg-stone-100 rounded-lg overflow-hidden border border-stone-200">
-                                                <img
+                                            <div className="aspect-video bg-stone-100 rounded-lg overflow-hidden border border-stone-200 relative">
+                                                <Image
                                                     src={img}
                                                     alt={`Gallery ${index + 1}`}
-                                                    className="w-full h-full object-cover"
+                                                    fill
+                                                    className="object-cover"
                                                 />
                                             </div>
                                             <button

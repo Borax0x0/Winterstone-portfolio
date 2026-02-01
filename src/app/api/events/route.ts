@@ -3,6 +3,11 @@ import { auth } from '@/auth';
 import dbConnect from '@/lib/db';
 import Event from '@/models/Event';
 
+interface SessionUser {
+    email?: string | null;
+    role?: string;
+}
+
 // GET all events (public - anyone can view events)
 export async function GET() {
     try {
@@ -23,7 +28,8 @@ export async function POST(request: Request) {
         const session = await auth();
         
         // Only admin/superadmin can create events
-        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+        const userRole = (session?.user as SessionUser | undefined)?.role;
+        if (!session?.user || !userRole || !['admin', 'superadmin'].includes(userRole)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 

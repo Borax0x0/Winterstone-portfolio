@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, User, Briefcase, Mail, Phone as PhoneIcon, Activity, Loader2 } from "lucide-react";
 import { Employee, EmployeeRole, EmployeeStatus } from "@/context/EmployeeContext";
@@ -13,39 +13,59 @@ interface EmployeeModalProps {
     title: string;
 }
 
+interface FormData {
+    name: string;
+    role: EmployeeRole;
+    email: string;
+    phone: string;
+    status: EmployeeStatus;
+    joinedDate: string;
+}
+
+// Helper to get default form data
+const getDefaultFormData = (): FormData => ({
+    name: "",
+    role: "Receptionist",
+    email: "",
+    phone: "",
+    status: "Active",
+    joinedDate: new Date().toISOString().split('T')[0]
+});
+
+// Helper to get form data from initial data
+const getFormDataFromEmployee = (employee: Employee): FormData => ({
+    name: employee.name,
+    role: employee.role,
+    email: employee.email,
+    phone: employee.phone,
+    status: employee.status,
+    joinedDate: employee.joinedDate
+});
+
 export default function EmployeeModal({ isOpen, onClose, onSubmit, initialData, title }: EmployeeModalProps) {
-    const [formData, setFormData] = useState({
-        name: "",
-        role: "Receptionist" as EmployeeRole,
-        email: "",
-        phone: "",
-        status: "Active" as EmployeeStatus,
-        joinedDate: new Date().toISOString().split('T')[0]
-    });
+    // Compute initial form data based on props (avoids setState in effect)
+    const computedInitialData = useMemo<FormData>(() => {
+        if (initialData) {
+            return getFormDataFromEmployee(initialData);
+        }
+        return getDefaultFormData();
+    }, [initialData]);
+
+    const [formData, setFormData] = useState<FormData>(computedInitialData);
     const [isLoading, setIsLoading] = useState(false);
 
-    useEffect(() => {
+    // Reset form when modal opens/closes or initialData changes
+    // Using key prop on modal would be cleaner, but this works for existing pattern
+    const modalKey = initialData?._id || initialData?.id || 'new';
+    
+    // Update form data when initialData changes
+    React.useEffect(() => {
         if (initialData) {
-            setFormData({
-                name: initialData.name,
-                role: initialData.role,
-                email: initialData.email,
-                phone: initialData.phone,
-                status: initialData.status,
-                joinedDate: initialData.joinedDate
-            });
-        } else {
-            // Reset
-            setFormData({
-                name: "",
-                role: "Receptionist",
-                email: "",
-                phone: "",
-                status: "Active",
-                joinedDate: new Date().toISOString().split('T')[0]
-            });
+            setFormData(getFormDataFromEmployee(initialData));
+        } else if (isOpen) {
+            setFormData(getDefaultFormData());
         }
-    }, [initialData, isOpen]);
+    }, [modalKey, isOpen, initialData]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

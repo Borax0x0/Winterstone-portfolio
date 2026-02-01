@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Script from "next/script";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { ArrowLeft, Calendar, User, Check, Phone, Mail, Loader2, CreditCard } from "lucide-react";
 // Email sent via API route (server-side)
-import PaymentModal from "@/components/PaymentModal"; // We might re-purpose or remove this if logic is handled here
+// PaymentModal removed - logic is handled inline
 import InvoiceModal from "@/components/InvoiceModal";
 import { useBookings } from "@/context/BookingContext"; // Import Context
 
@@ -18,10 +18,44 @@ const ROOMS = [
   { id: "sunlit-studio", name: "Sunlit Studio", price: 7200, image: "/sunlit-main.jpg" },
 ];
 
+// Razorpay response interfaces
+interface RazorpayPaymentResponse {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}
+
+interface RazorpayFailedResponse {
+  error: {
+    code: string;
+    description: string;
+    source: string;
+    step: string;
+    reason: string;
+  };
+}
+
+interface PaymentDetails extends RazorpayPaymentResponse {
+  mock: boolean;
+}
+
+// Invoice data interface
+interface InvoiceData {
+  id: string;
+  roomName: string;
+  guestName: string;
+  email: string;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  basePrice: number;
+  taxes: number;
+  grandTotal: number;
+}
+
 function BookingContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const { initiatePayment, addBooking } = useBookings(); // Use Context
+  const { initiatePayment } = useBookings(); // Use Context
 
   // STATE
   const [selectedRoomId, setSelectedRoomId] = useState(ROOMS[0].id);
@@ -36,12 +70,11 @@ function BookingContent() {
   // PAYMENT & SENDING STATES
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
-  const [invoiceData, setInvoiceData] = useState<any>(null); // Store confirmed booking data
+  const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null); // Store confirmed booking data
   const [isSuccess, setIsSuccess] = useState(false);
 
   // EMAIL VERIFICATION STATES
   const [showVerifyModal, setShowVerifyModal] = useState(false);
-  const [isCheckingVerification, setIsCheckingVerification] = useState(false);
   const [isSendingVerification, setIsSendingVerification] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState("");
 
@@ -91,6 +124,7 @@ function BookingContent() {
     if (checkInDate && checkOutDate && checkOutDate <= checkInDate) {
       setCheckOutDate(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only reset when checkInDate changes, not checkOutDate
   }, [checkInDate]);
 
   // Helper: convert Date to string for API/display
@@ -141,10 +175,8 @@ function BookingContent() {
 
     try {
       // Check if email is verified first
-      setIsCheckingVerification(true);
       const verifyRes = await fetch(`/api/auth/check-verification?email=${encodeURIComponent(email)}`);
       const verifyData = await verifyRes.json();
-      setIsCheckingVerification(false);
 
       if (!verifyRes.ok || !verifyData.verified) {
         // Email not verified - show verification modal
@@ -181,7 +213,7 @@ function BookingContent() {
         name: "Winterstone Luxury",
         description: `Booking for ${selectedRoom.name}`,
         order_id: order.id,
-        handler: async function (response: any) {
+        handler: async function (response: RazorpayPaymentResponse) {
           console.log("Payment Successful", response);
           await verifyPayment({
             ...response,
@@ -198,9 +230,9 @@ function BookingContent() {
         }
       };
 
-      const rzp1 = new (window as any).Razorpay(options);
+      const rzp1 = new (window as unknown as { Razorpay: new (options: object) => { open: () => void; on: (event: string, handler: (response: RazorpayFailedResponse) => void) => void } }).Razorpay(options);
       rzp1.open();
-      rzp1.on('payment.failed', function (response: any) {
+      rzp1.on('payment.failed', function (response: RazorpayFailedResponse) {
         alert("Payment Failed: " + response.error.description);
         setIsProcessing(false);
       });
@@ -213,7 +245,7 @@ function BookingContent() {
   };
 
   // --- STEP 2: VERIFY & FINALIZE ---
-  const verifyPayment = async (paymentDetails: any) => {
+  const verifyPayment = async (paymentDetails: PaymentDetails) => {
     try {
       // 1. Save Booking Pending Verification
       // Actually, we can save AFTER verification for simplicity, OR verify creates the record?
@@ -353,7 +385,7 @@ function BookingContent() {
       } else {
         setVerificationMessage(data.error || "Failed to send verification email");
       }
-    } catch (error) {
+    } catch {
       setVerificationMessage("Something went wrong. Please try again.");
     } finally {
       setIsSendingVerification(false);

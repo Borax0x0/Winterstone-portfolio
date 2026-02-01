@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { X, RotateCcw, Loader2 } from "lucide-react";
@@ -36,14 +36,8 @@ export default function AvailabilityModal({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Fetch blocked dates from API when modal opens
-  useEffect(() => {
-    if (isOpen && roomSlug) {
-      fetchBlockedDates();
-    }
-  }, [isOpen, roomSlug]);
-
-  const fetchBlockedDates = async () => {
+  // Fetch blocked dates from API
+  const fetchBlockedDates = useCallback(async () => {
     setIsLoadingDates(true);
 
     // Add 5 second timeout to prevent infinite loading
@@ -63,10 +57,10 @@ export default function AvailabilityModal({
         const dates = data.blockedDates.map((dateStr: string) => new Date(dateStr));
         setBlockedDates(dates);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If timeout or network error, just proceed with empty blocked dates
       // Calendar will still work, just won't show blocked dates
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         console.warn("Availability fetch timed out - proceeding without blocked dates");
       } else {
         console.error("Failed to fetch availability:", error);
@@ -74,7 +68,14 @@ export default function AvailabilityModal({
     } finally {
       setIsLoadingDates(false);
     }
-  };
+  }, [roomSlug]);
+
+  // Fetch blocked dates from API when modal opens
+  useEffect(() => {
+    if (isOpen && roomSlug) {
+      fetchBlockedDates();
+    }
+  }, [isOpen, roomSlug, fetchBlockedDates]);
 
   if (!isOpen) return null;
 

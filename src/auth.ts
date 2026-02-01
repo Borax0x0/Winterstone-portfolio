@@ -4,6 +4,19 @@ import { verifyPassword } from "@/lib/password";
 import dbConnect from "@/lib/db";
 import User from "@/models/User";
 
+// Extend the built-in types
+interface ExtendedUser {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+}
+
+interface ExtendedToken {
+    role?: string;
+    id?: string;
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
     providers: [
         Credentials({
@@ -44,8 +57,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                         email: user.email,
                         role: user.role,
                     };
-                } catch (error: any) {
-                    console.error("Auth error:", error.message);
+                } catch (error: unknown) {
+                    const errorMessage = error instanceof Error ? error.message : "Authentication failed";
+                    console.error("Auth error:", errorMessage);
                     throw error;
                 }
             },
@@ -57,15 +71,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
-                token.role = (user as any).role;
-                token.id = (user as any).id;
+                // User comes from authorize callback with role and id
+                token.role = (user as unknown as ExtendedUser).role;
+                token.id = (user as unknown as ExtendedUser).id;
             }
             return token;
         },
         async session({ session, token }) {
             if (session.user) {
-                (session.user as any).role = token.role;
-                (session.user as any).id = token.id;
+                const extToken = token as ExtendedToken;
+                // Cast to allow adding custom properties
+                const sessionUser = session.user as { role?: string; id?: string };
+                sessionUser.role = extToken.role || 'guest';
+                sessionUser.id = extToken.id || '';
             }
             return session;
         },

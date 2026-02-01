@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, X } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 interface SignOutModalProps {
     isOpen: boolean;

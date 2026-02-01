@@ -94,9 +94,10 @@ export default function ReviewForm({ roomSlug, onSuccess }: ReviewFormProps) {
 
             onSuccess?.();
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             setStatus("error");
-            setMessage(error.message);
+            const errorMessage = error instanceof Error ? error.message : "Failed to submit review";
+            setMessage(errorMessage);
         }
     };
 

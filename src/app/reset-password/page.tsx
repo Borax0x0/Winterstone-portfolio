@@ -49,8 +49,9 @@ function ResetPasswordContent() {
             setSuccess(true);
             setTimeout(() => router.push("/"), 3000);
 
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to reset password';
+            setError(errorMessage);
         } finally {
             setIsLoading(false);
         }

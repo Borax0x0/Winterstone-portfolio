@@ -3,6 +3,11 @@ import { auth } from '@/auth';
 import dbConnect from '@/lib/db';
 import Room from '@/models/Room';
 
+interface SessionUser {
+    email?: string | null;
+    role?: string;
+}
+
 // GET single room by slug (public)
 export async function GET(
     request: Request,
@@ -34,7 +39,8 @@ export async function PUT(
         const session = await auth();
         
         // Check if user is admin or superadmin
-        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+        const userRole = (session?.user as SessionUser | undefined)?.role;
+        if (!session?.user || !userRole || !['admin', 'superadmin'].includes(userRole)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -71,7 +77,8 @@ export async function DELETE(
         const session = await auth();
         
         // Check if user is admin or superadmin
-        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+        const userRole = (session?.user as SessionUser | undefined)?.role;
+        if (!session?.user || !userRole || !['admin', 'superadmin'].includes(userRole)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 

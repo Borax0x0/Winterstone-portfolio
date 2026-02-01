@@ -16,13 +16,21 @@ export interface Booking {
     status: BookingStatus;
 }
 
+interface PaymentOrder {
+    id: string;
+    amount: number;
+    currency: string;
+    status: string;
+    mock?: boolean;
+}
+
 interface BookingContextType {
     bookings: Booking[];
     isLoading: boolean;
     addBooking: (booking: Omit<Booking, "_id" | "id">) => Promise<void>;
     updateBookingStatus: (id: string, status: BookingStatus) => Promise<void>;
     deleteBooking: (id: string) => Promise<void>;
-    initiatePayment: (amount: number, currency?: string) => Promise<any>;
+    initiatePayment: (amount: number, currency?: string) => Promise<PaymentOrder>;
 }
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);

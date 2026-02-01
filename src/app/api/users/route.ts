@@ -3,6 +3,11 @@ import { auth } from '@/auth';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 
+interface SessionUser {
+    email?: string | null;
+    role?: string;
+}
+
 /**
  * GET /api/users
  * List all users (superadmin only)
@@ -10,8 +15,9 @@ import User from '@/models/User';
 export async function GET() {
     try {
         const session = await auth();
+        const userRole = (session?.user as SessionUser | undefined)?.role;
 
-        if (!session || (session.user as any)?.role !== 'superadmin') {
+        if (!session || userRole !== 'superadmin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
@@ -23,9 +29,10 @@ export async function GET() {
 
         return NextResponse.json({ users });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Get users error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Failed to get users';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
 
@@ -36,8 +43,9 @@ export async function GET() {
 export async function PATCH(request: Request) {
     try {
         const session = await auth();
+        const userRole = (session?.user as SessionUser | undefined)?.role;
 
-        if (!session || (session.user as any)?.role !== 'superadmin') {
+        if (!session || userRole !== 'superadmin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
@@ -71,9 +79,10 @@ export async function PATCH(request: Request) {
             user: { id: user._id, email: user.email, role: user.role },
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Update user error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Failed to update user';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
 
@@ -84,8 +93,9 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
     try {
         const session = await auth();
+        const userRole = (session?.user as SessionUser | undefined)?.role;
 
-        if (!session || (session.user as any)?.role !== 'superadmin') {
+        if (!session || userRole !== 'superadmin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
@@ -112,8 +122,9 @@ export async function DELETE(request: Request) {
 
         return NextResponse.json({ message: 'User deleted' });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Delete user error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Failed to delete user';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

@@ -3,6 +3,11 @@ import { auth } from '@/auth';
 import dbConnect from '@/lib/db';
 import Review from '@/models/Review';
 
+interface SessionUser {
+    email?: string | null;
+    role?: string;
+}
+
 /**
  * PATCH /api/reviews/[id]
  * 
@@ -16,7 +21,8 @@ export async function PATCH(
     try {
         // Auth check - admin only
         const session = await auth();
-        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+        const userRole = (session?.user as SessionUser | undefined)?.role;
+        if (!session?.user || !userRole || !['admin', 'superadmin'].includes(userRole)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -40,9 +46,10 @@ export async function PATCH(
             review,
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Error updating review:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Failed to update review';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
 
@@ -58,7 +65,8 @@ export async function DELETE(
     try {
         // Auth check - admin only
         const session = await auth();
-        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+        const userRole = (session?.user as SessionUser | undefined)?.role;
+        if (!session?.user || !userRole || !['admin', 'superadmin'].includes(userRole)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -73,8 +81,9 @@ export async function DELETE(
 
         return NextResponse.json({ message: 'Review deleted' });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Error deleting review:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Failed to delete review';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

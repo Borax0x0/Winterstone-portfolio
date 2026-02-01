@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 
 import { useAuth } from "@/context/AuthContext";
@@ -57,11 +58,15 @@ export default function BlogPage() {
       <section className="relative h-screen w-full overflow-hidden flex items-center justify-center bg-stone-900">
 
         {/* Background Image */}
-        <img
-          src="/blog-header.jpg"
-          alt="Himalayan Background"
-          className="absolute inset-0 w-full h-full object-cover opacity-80" // Increased opacity slightly for drama
-        />
+        <div className="absolute inset-0 w-full h-full">
+          <Image
+            src="/blog-header.jpg"
+            alt="Himalayan Background"
+            fill
+            priority
+            className="object-cover opacity-80" // Increased opacity slightly for drama
+          />
+        </div>
 
         {/* Dark Overlay to ensure white text is readable */}
         <div className="absolute inset-0 bg-black/30 z-0" />
@@ -105,7 +110,7 @@ export default function BlogPage() {
           </p>
           <p className="font-light text-lg leading-relaxed mb-12">
             Surrounded by ancient Deodar forests and overlooking the Silent Valley, the location was chosen for its
-            unnatural stillness. The wind here doesn't howl; it whispers. Today, we honor that heritage by maintaining
+            unnatural stillness. The wind here doesn&apos;t howl; it whispers. Today, we honor that heritage by maintaining
             the original raw stone walls in our lobby, reminding every guest that luxury here is defined by nature, not gold.
           </p>
 
@@ -125,7 +130,7 @@ export default function BlogPage() {
             <span className="text-saffron text-xs tracking-widest uppercase mb-4 block">The Guardian</span>
             <h2 className="font-serif text-4xl text-stone-dark mb-6">A Silent Companion</h2>
             <p className="text-stone-600 font-light leading-relaxed mb-6">
-              If you wake early enough to catch the sunrise, you might spot him. "Buster" isn't technically on the payroll,
+              If you wake early enough to catch the sunrise, you might spot him. &quot;Buster&quot; isn&apos;t technically on the payroll,
               but he has been the soul of Winterstone for over a decade. A local mountain shepherd mix with eyes as deep
               as the valley, he roams the grounds with a quiet dignity.
             </p>
@@ -142,10 +147,11 @@ export default function BlogPage() {
             transition={{ duration: 0.8 }}
             className="relative h-[500px] w-full bg-stone-100 rounded-sm overflow-hidden"
           >
-            <img
+            <Image
               src="/blog-dog.jpg"
               alt="Mountain Dog"
-              className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+              fill
+              className="object-cover hover:scale-105 transition-transform duration-700"
             />
           </motion.div>
         </div>
@@ -161,10 +167,11 @@ export default function BlogPage() {
             transition={{ duration: 0.8 }}
             className="order-2 md:order-1 relative h-[500px] w-full bg-white rounded-sm overflow-hidden"
           >
-            <img
+            <Image
               src="/blog-snow.jpg"
               alt="Heavy Snow"
-              className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+              fill
+              className="object-cover hover:scale-105 transition-transform duration-700"
             />
           </motion.div>
 
@@ -178,14 +185,14 @@ export default function BlogPage() {
             <span className="text-saffron text-xs tracking-widest uppercase mb-4 block">The Season</span>
             <h2 className="font-serif text-4xl text-stone-dark mb-6">The White Silence</h2>
             <p className="text-stone-600 font-light leading-relaxed mb-6">
-              When winter arrives, it doesn't just snow—it transforms the world. Winterstone is famous for its
-              "astonishing snowfall," where feet of fresh powder can fall overnight, blanketing the sharp jagged
+              When winter arrives, it doesn&apos;t just snow—it transforms the world. Winterstone is famous for its
+              &quot;astonishing snowfall,&quot; where feet of fresh powder can fall overnight, blanketing the sharp jagged
               peaks in soft, rolling white.
             </p>
             <p className="text-stone-600 font-light leading-relaxed">
               The view from the Great Hall during a storm is hypnotic; a wall of white moving against the glass
               while you sit by the fire. And when the storm breaks, the sun hitting the fresh snow creates a
-              blinding, diamond-like clarity that simply doesn't exist at lower altitudes.
+              blinding, diamond-like clarity that simply doesn&apos;t exist at lower altitudes.
             </p>
           </motion.div>
         </div>
@@ -236,10 +243,11 @@ export default function BlogPage() {
                   className="group relative"
                 >
                   <div className="h-64 w-full bg-stone-800 rounded-sm overflow-hidden mb-6 relative">
-                    <img
+                    <Image
                       src={event.image}
                       alt={event.title}
-                      className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
+                      fill
+                      className="object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
                     />
 
                     {/* ADMIN ACTIONS OVERLAY */}
@@ -305,10 +313,11 @@ export default function BlogPage() {
                 className="group opacity-60 hover:opacity-100 transition-opacity duration-500 relative"
               >
                 <div className="h-48 w-full bg-stone-700 rounded-sm overflow-hidden mb-6 relative grayscale group-hover:grayscale-0 transition-all">
-                  <img
+                  <Image
                     src={event.image}
                     alt={event.title}
-                    className="w-full h-full object-cover opacity-70 group-hover:opacity-100"
+                    fill
+                    className="object-cover opacity-70 group-hover:opacity-100"
                   />
 
                   {/* ADMIN ACTIONS OVERLAY (For Past Events too) */}
@@ -358,10 +367,11 @@ export default function BlogPage() {
           </div>
 
           <div className="order-1 md:order-2 h-[500px] bg-stone-200 w-full relative rounded-sm overflow-hidden">
-            <img
+            <Image
               src="/blog-surroundings.jpg"
               alt="Silent Valley"
-              className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+              fill
+              className="object-cover hover:scale-105 transition-transform duration-700"
             />
           </div>
         </div>

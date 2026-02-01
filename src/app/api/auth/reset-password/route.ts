@@ -59,7 +59,7 @@ export async function POST(request: Request) {
                 : 'Password reset requested. Check console for link (email service unavailable).',
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Password reset error:', error);
         return NextResponse.json(
             { error: 'Failed to process request' },

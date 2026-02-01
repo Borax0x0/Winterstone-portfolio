@@ -3,6 +3,17 @@ import { auth } from '@/auth';
 import dbConnect from '@/lib/db';
 import Review from '@/models/Review';
 
+interface SessionUser {
+    name?: string | null;
+    email?: string | null;
+    role?: string;
+}
+
+interface ReviewQuery {
+    roomSlug?: string;
+    approved?: boolean;
+}
+
 /**
  * GET /api/reviews
  * 
@@ -24,13 +35,14 @@ export async function GET(request: Request) {
         // If requesting all reviews (including unapproved), must be admin
         if (showAll) {
             const session = await auth();
-            if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+            const userRole = (session?.user as SessionUser | undefined)?.role;
+            if (!session?.user || !userRole || !['admin', 'superadmin'].includes(userRole)) {
                 return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
             }
         }
 
         // Build query
-        const query: any = {};
+        const query: ReviewQuery = {};
 
         if (room) {
             query.roomSlug = room.toLowerCase();
@@ -57,9 +69,10 @@ export async function GET(request: Request) {
             averageRating: Math.round(avgRating * 10) / 10,  // Round to 1 decimal
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Error fetching reviews:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Failed to fetch reviews';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
 
@@ -131,7 +144,7 @@ export async function POST(request: Request) {
             reviewId: review._id,
         }, { status: 201 });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Error submitting review:', error);
         return NextResponse.json(
             { error: 'Failed to submit review. Please try again.' },

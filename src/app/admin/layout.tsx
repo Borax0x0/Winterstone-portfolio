@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/admin/Sidebar";
@@ -8,18 +8,19 @@ import { Loader2 } from "lucide-react";
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const { user, isLoading } = useAuth();
     const router = useRouter();
-    const [isAuthorized, setIsAuthorized] = useState(false);
+    
+    // Derive authorization state from user data (no setState needed)
+    const isAuthorized = useMemo(() => {
+        if (isLoading || !user) return false;
+        return user.role === "admin" || user.role === "superadmin";
+    }, [user, isLoading]);
 
+    // Handle redirect in useEffect (side effect only, no setState)
     useEffect(() => {
-        if (!isLoading) {
-            // Allow both admin and superadmin
-            if (!user || (user.role !== "admin" && user.role !== "superadmin")) {
-                router.push("/"); // Redirect unauthorized users to home
-            } else {
-                setIsAuthorized(true);
-            }
+        if (!isLoading && !isAuthorized) {
+            router.push("/"); // Redirect unauthorized users to home
         }
-    }, [user, isLoading, router]);
+    }, [isLoading, isAuthorized, router]);
 
     // Show loading spinner while Auth checks
     if (isLoading || !isAuthorized) {

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -24,13 +25,13 @@ const About = () => {
             Silence is the <br /> ultimate luxury.
           </h2>
           <p className="text-stone-dark/80 leading-relaxed mb-6 font-light text-lg">
-            Winter Stone isn't just a hotel; it is a pause button for the world. 
+            Winter Stone isn&apos;t just a hotel; it is a pause button for the world. 
             Nestled 8,000 feet above the noise, we offer a retreat where the only 
             playlists are the wind in the pines and the crackle of the hearth.
           </p>
           <p className="text-stone-dark/80 leading-relaxed mb-8 font-light text-lg">
             Built from local granite and reclaimed cedar, our walls breathe 
-            with the mountain. Here, you don't check in—you come home.
+            with the mountain. Here, you don&apos;t check in—you come home.
           </p>
           
           <Link href="/blog">
@@ -51,17 +52,23 @@ const About = () => {
               className="space-y-4"
           >
             {/* Tall Image */}
-            <img 
-              src="/about-1.jpg" 
-              alt="Stone Interior" 
-              className="w-full h-80 object-cover rounded-sm grayscale hover:grayscale-0 transition-all duration-700"
-            />
+            <div className="relative w-full h-80 rounded-sm overflow-hidden">
+              <Image 
+                src="/about-1.jpg" 
+                alt="Stone Interior" 
+                fill
+                className="object-cover grayscale hover:grayscale-0 transition-all duration-700"
+              />
+            </div>
             {/* Small Detail Image */}
-            <img 
-              src="/about-2.jpg" 
-              alt="Winter Texture" 
-              className="w-full h-48 object-cover rounded-sm grayscale hover:grayscale-0 transition-all duration-700"
-            />
+            <div className="relative w-full h-48 rounded-sm overflow-hidden">
+              <Image 
+                src="/about-2.jpg" 
+                alt="Winter Texture" 
+                fill
+                className="object-cover grayscale hover:grayscale-0 transition-all duration-700"
+              />
+            </div>
           </motion.div>
           
           <motion.div 
@@ -71,11 +78,14 @@ const About = () => {
               className="pt-12"
           >
               {/* Offset Tall Image */}
-              <img 
-              src="/about-3.jpg" 
-              alt="Snow View" 
-              className="w-full h-96 object-cover rounded-sm grayscale hover:grayscale-0 transition-all duration-700"
-            />
+              <div className="relative w-full h-96 rounded-sm overflow-hidden">
+                <Image 
+                  src="/about-3.jpg" 
+                  alt="Snow View" 
+                  fill
+                  className="object-cover grayscale hover:grayscale-0 transition-all duration-700"
+                />
+              </div>
           </motion.div>
         </div>
 

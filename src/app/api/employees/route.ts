@@ -4,6 +4,11 @@ import dbConnect from '@/lib/db';
 import Employee from '@/models/Employee';
 import { INITIAL_EMPLOYEES } from '@/lib/mockData';
 
+interface SessionUser {
+    email?: string | null;
+    role?: string;
+}
+
 // GET is public (employees are shown on the website)
 export async function GET() {
     try {
@@ -18,7 +23,7 @@ export async function GET() {
         // Fetch all employees sort by createdAt desc
         const employees = await Employee.find({}).sort({ createdAt: -1 });
         return NextResponse.json(employees);
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Failed to fetch employees' }, { status: 500 });
     }
 }
@@ -28,7 +33,8 @@ export async function POST(request: Request) {
     try {
         // Auth check - admin only
         const session = await auth();
-        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+        const userRole = (session?.user as SessionUser | undefined)?.role;
+        if (!session?.user || !userRole || !['admin', 'superadmin'].includes(userRole)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -39,7 +45,7 @@ export async function POST(request: Request) {
         const employee = await Employee.create(body);
 
         return NextResponse.json(employee, { status: 201 });
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Failed to create employee' }, { status: 400 });
     }
 }

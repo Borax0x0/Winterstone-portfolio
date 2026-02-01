@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { ArrowLeft, ChevronLeft, ChevronRight, X } from "lucide-react";
 import AvailabilityModal from "@/components/AvailabilityModal";
@@ -133,7 +134,13 @@ export default function RoomPage() {
 
       {/* HERO SECTION */}
       <div className="relative h-screen w-full">
-        <img src={room.heroImage} alt={room.name} className="w-full h-full object-cover" />
+        <Image 
+          src={room.heroImage} 
+          alt={room.name} 
+          fill 
+          priority
+          className="object-cover" 
+        />
         <div className="absolute inset-0 bg-black/30" />
 
         <div className="absolute bottom-12 left-6 md:left-12 text-white z-10">
@@ -197,7 +204,12 @@ export default function RoomPage() {
                   className="relative h-[500px] md:h-[800px] w-full cursor-pointer group"
                   onClick={() => { setCurrentSlide(0); setIsGalleryOpen(true); }}
                 >
-                  <img src={room.gallery[0]} alt="Feature View" className="w-full h-full object-cover block rounded-lg" />
+                  <Image 
+                    src={room.gallery[0]} 
+                    alt="Feature View" 
+                    fill
+                    className="object-cover block rounded-lg" 
+                  />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg" />
                 </div>
               )}
@@ -207,7 +219,12 @@ export default function RoomPage() {
                     className="relative h-[240px] md:h-[390px] w-full cursor-pointer group"
                     onClick={() => { setCurrentSlide(1); setIsGalleryOpen(true); }}
                   >
-                    <img src={room.gallery[1]} alt="Detail" className="w-full h-full object-cover block rounded-lg" />
+                    <Image 
+                      src={room.gallery[1]} 
+                      alt="Detail" 
+                      fill
+                      className="object-cover block rounded-lg" 
+                    />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg" />
                   </div>
                 )}
@@ -216,7 +233,12 @@ export default function RoomPage() {
                     className="relative h-[240px] md:h-[390px] w-full cursor-pointer group"
                     onClick={() => { setCurrentSlide(2); setIsGalleryOpen(true); }}
                   >
-                    <img src={room.gallery[2]} alt="Bath Detail" className="w-full h-full object-cover block rounded-lg" />
+                    <Image 
+                      src={room.gallery[2]} 
+                      alt="Bath Detail" 
+                      fill
+                      className="object-cover block rounded-lg" 
+                    />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg" />
                     {/* View More overlay if more than 3 images */}
                     {room.gallery.length > 3 && (
@@ -271,11 +293,12 @@ export default function RoomPage() {
           </button>
 
           {/* Current Image */}
-          <div className="w-full h-full flex items-center justify-center p-4 md:p-20">
-            <img
+          <div className="w-full h-full flex items-center justify-center p-4 md:p-20 relative">
+            <Image
               src={room.gallery[currentSlide]}
               alt={`Room view ${currentSlide + 1}`}
-              className="max-w-full max-h-full object-contain"
+              fill
+              className="object-contain"
             />
           </div>
 
@@ -290,17 +313,17 @@ export default function RoomPage() {
 
           {/* Thumbnail Strip */}
           <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 flex gap-2 max-w-[90vw] overflow-x-auto py-2 px-4">
-            {room.gallery.map((img, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentSlide(index)}
-                className={`flex-shrink-0 w-16 h-12 md:w-20 md:h-14 rounded overflow-hidden border-2 transition-all ${
-                  currentSlide === index ? 'border-saffron' : 'border-transparent opacity-50 hover:opacity-100'
-                }`}
-              >
-                <img src={img} alt="" className="w-full h-full object-cover" />
-              </button>
-            ))}
+              {room.gallery.map((img, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentSlide(index)}
+                  className={`relative flex-shrink-0 w-16 h-12 md:w-20 md:h-14 rounded overflow-hidden border-2 transition-all ${
+                    currentSlide === index ? 'border-saffron' : 'border-transparent opacity-50 hover:opacity-100'
+                  }`}
+                >
+                  <Image src={img} alt="" fill className="object-cover" />
+                </button>
+              ))}
           </div>
         </div>
       )}

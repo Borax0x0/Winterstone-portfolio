@@ -104,13 +104,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             }
             await login("", email, "guest", password); // Role determined by DB
             handleClose();
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Auth Fail:", err);
+            const errorMessage = err instanceof Error ? err.message : "Something went wrong";
             // Translate generic error if needed
-            if (err.message === "Invalid credentials") {
+            if (errorMessage === "Invalid credentials") {
                 setError("Incorrect email or password");
             } else {
-                setError(err.message || "Something went wrong not correct");
+                setError(errorMessage);
             }
         } finally {
             setIsLoading(false);

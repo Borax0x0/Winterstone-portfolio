@@ -3,6 +3,11 @@ import { auth } from '@/auth';
 import dbConnect from '@/lib/db';
 import Room from '@/models/Room';
 
+interface SessionUser {
+    email?: string | null;
+    role?: string;
+}
+
 // GET all rooms (public)
 export async function GET() {
     try {
@@ -23,7 +28,8 @@ export async function POST(request: Request) {
         const session = await auth();
         
         // Check if user is admin or superadmin
-        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+        const userRole = (session?.user as SessionUser | undefined)?.role;
+        if (!session?.user || !userRole || !['admin', 'superadmin'].includes(userRole)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
