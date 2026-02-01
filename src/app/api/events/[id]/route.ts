@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
 import dbConnect from '@/lib/db';
 import Event from '@/models/Event';
 
@@ -8,16 +9,24 @@ interface Params {
     }>;
 }
 
+// PUT update event (admin only)
 export async function PUT(request: Request, props: Params) {
     const params = await props.params;
     try {
+        const session = await auth();
+        
+        // Only admin/superadmin can update events
+        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         await dbConnect();
         const body = await request.json();
 
         const updatedEvent = await Event.findByIdAndUpdate(
             params.id,
             body,
-            { new: true, runValidators: true } // Return the updated document
+            { new: true, runValidators: true }
         );
 
         if (!updatedEvent) {
@@ -26,13 +35,22 @@ export async function PUT(request: Request, props: Params) {
 
         return NextResponse.json(updatedEvent);
     } catch (error) {
+        console.error('Failed to update event:', error);
         return NextResponse.json({ error: 'Failed to update event' }, { status: 500 });
     }
 }
 
+// DELETE event (admin only)
 export async function DELETE(request: Request, props: Params) {
     const params = await props.params;
     try {
+        const session = await auth();
+        
+        // Only admin/superadmin can delete events
+        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         await dbConnect();
 
         const deletedEvent = await Event.findByIdAndDelete(params.id);
@@ -43,6 +61,7 @@ export async function DELETE(request: Request, props: Params) {
 
         return NextResponse.json({ message: 'Event deleted successfully' });
     } catch (error) {
+        console.error('Failed to delete event:', error);
         return NextResponse.json({ error: 'Failed to delete event' }, { status: 500 });
     }
 }

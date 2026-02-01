@@ -1,20 +1,20 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, X } from "lucide-react";
 import AvailabilityModal from "@/components/AvailabilityModal";
 import ReviewForm from "@/components/ReviewForm";
 import ReviewsList from "@/components/ReviewsList";
 
-// 1. THIS WAS MISSING: The Room Data Array
-const roomsData = [
+// Fallback data in case API is not populated yet
+const fallbackRoomsData = [
   {
     slug: "skyline-haven",
     name: "Skyline Haven",
-    price: "From ₹8,500",
-    image: "/skyline-main.jpg",
+    price: 8500,
+    heroImage: "/skyline-main.jpg",
     gallery: ["/skyline-1.jpg", "/skyline-2.jpg", "/bath-1.jpg"],
     description: "Perched high above the valley, the Skyline Haven is designed for the observer. Step out onto your private balcony to witness the mist rolling over the Himalayas. The interior blends warm wood tones with modern luxury.",
     amenities: ["Private Mountain Balcony", "Valley View", "King Size Bed", "Heated Floors", "Work Desk", "High-Speed Wi-Fi"],
@@ -22,8 +22,8 @@ const roomsData = [
   {
     slug: "zen-nest",
     name: "Zen Nest",
-    price: "From ₹6,500",
-    image: "/zen-main.jpg",
+    price: 6500,
+    heroImage: "/zen-main.jpg",
     gallery: ["/zen-1.jpg", "/zen-2.jpg", "/bath-2.jpg"],
     description: "A sanctuary dedicated to mindfulness. The Zen Nest features designated space for yoga, meditation, and stillness. Minimalist decor and soft ambient lighting allow you to disconnect from the noise and reconnect with yourself.",
     amenities: ["Yoga & Meditation Space", "Soundproofing", "Meditation Cushions", "Herbal Tea Station", "Dimmable Lighting", "Queen Bed"],
@@ -31,28 +31,80 @@ const roomsData = [
   {
     slug: "sunlit-studio",
     name: "Sunlit Studio",
-    price: "From ₹7,200",
-    image: "/sunlit-main.jpg",
+    price: 7200,
+    heroImage: "/sunlit-main.jpg",
     gallery: ["/sunlit-1.jpg", "/sunlit-2.jpg", "/bath-1.jpg"],
     description: "Bathed in natural light, the Sunlit Studio blurs the line between indoors and out. Located on the ground floor for easy access, the massive front-facing windows frame the pine forest, bringing the golden hour directly to your bedside.",
     amenities: ["Floor-to-Ceiling Windows", "Ground Floor Access", "Sitting Area", "Natural Light", "Rain Shower", "Smart TV"],
   },
 ];
 
+interface Room {
+  _id?: string;
+  slug: string;
+  name: string;
+  price: number;
+  description: string;
+  amenities: string[];
+  heroImage: string;
+  gallery: string[];
+}
+
 export default function RoomPage() {
   const params = useParams();
-
-  // 2. FIND ROOM (Now this will work because roomsData exists)
-  const room = roomsData.find((r) => r.slug === params.slug);
-
-  // 3. STATE for Modal
+  const [room, setRoom] = useState<Room | null>(null);
+  const [allRooms, setAllRooms] = useState<Room[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
-  // Logic for Previous / Next Links
-  const currentIndex = roomsData.findIndex((r) => r?.slug === room?.slug);
-  const nextRoom = roomsData[(currentIndex + 1) % roomsData.length];
-  const prevRoom = roomsData[(currentIndex - 1 + roomsData.length) % roomsData.length];
+  // Fetch room data from API
+  useEffect(() => {
+    const fetchRoomData = async () => {
+      try {
+        // Fetch all rooms for navigation (no-store to always get fresh data)
+        const allRes = await fetch('/api/rooms', { cache: 'no-store' });
+        let roomsData: Room[] = [];
+        
+        if (allRes.ok) {
+          roomsData = await allRes.json();
+        }
 
+        // If no rooms in database, use fallback
+        if (roomsData.length === 0) {
+          roomsData = fallbackRoomsData;
+        }
+
+        setAllRooms(roomsData);
+
+        // Find current room
+        const currentRoom = roomsData.find((r) => r.slug === params.slug);
+        setRoom(currentRoom || null);
+      } catch (error) {
+        // On error, use fallback data
+        console.error('Failed to fetch room data:', error);
+        setAllRooms(fallbackRoomsData);
+        const currentRoom = fallbackRoomsData.find((r) => r.slug === params.slug);
+        setRoom(currentRoom || null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRoomData();
+  }, [params.slug]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-stone-900">
+        <div className="animate-spin h-8 w-8 border-2 border-saffron border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  // Room not found
   if (!room) {
     return (
       <div className="h-screen flex flex-col items-center justify-center text-white bg-stone-900">
@@ -62,8 +114,10 @@ export default function RoomPage() {
     );
   }
 
-  // Extract numeric price for the modal
-  const priceNumber = parseInt(room.price.replace(/[^\d]/g, ""));
+  // Logic for Previous / Next Links
+  const currentIndex = allRooms.findIndex((r) => r.slug === room.slug);
+  const nextRoom = allRooms[(currentIndex + 1) % allRooms.length];
+  const prevRoom = allRooms[(currentIndex - 1 + allRooms.length) % allRooms.length];
 
   return (
     <main className="min-h-screen bg-cream text-stone-dark">
@@ -74,19 +128,19 @@ export default function RoomPage() {
         onClose={() => setIsModalOpen(false)}
         roomName={room.name}
         roomSlug={room.slug}
-        pricePerNight={priceNumber}
+        pricePerNight={room.price}
       />
 
       {/* HERO SECTION */}
       <div className="relative h-screen w-full">
-        <img src={room.image} alt={room.name} className="w-full h-full object-cover" />
+        <img src={room.heroImage} alt={room.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-black/30" />
-
-        {/* Note: I removed the extra 'Back to Suites' link here since you have the global navbar now */}
 
         <div className="absolute bottom-12 left-6 md:left-12 text-white z-10">
           <h1 className="text-4xl md:text-6xl font-serif font-bold mb-2">{room.name}</h1>
-          <p className="text-xl text-saffron font-light">{room.price} <span className="text-sm text-white/80">/ night</span></p>
+          <p className="text-xl text-saffron font-light">
+            From ₹{room.price.toLocaleString()} <span className="text-sm text-white/80">/ night</span>
+          </p>
         </div>
       </div>
 
@@ -130,26 +184,126 @@ export default function RoomPage() {
         </div>
       </div>
 
-      {/* FEATURE GALLERY */}
-      <div className="w-full bg-stone-900 py-24">
-        <div className="max-w-6xl mx-auto px-6">
-          <h3 className="font-serif font-bold text-2xl mb-12 text-stone-100">Closer Look</h3>
+      {/* GALLERY PREVIEW + MODAL */}
+      {room.gallery && room.gallery.length > 0 && (
+        <div className="w-full bg-stone-900 py-24">
+          <div className="max-w-6xl mx-auto px-6">
+            <h3 className="font-serif font-bold text-2xl mb-12 text-stone-100">Closer Look</h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr] gap-5 w-full">
-            <div className="relative h-[500px] md:h-[800px] w-full">
-              <img src={room.gallery[0]} alt="Feature View" className="w-full h-full object-cover block" />
-            </div>
-            <div className="flex flex-col gap-5 h-full">
-              <div className="relative h-[240px] md:h-[390px] w-full">
-                <img src={room.gallery[1]} alt="Detail" className="w-full h-full object-cover block" />
+            {/* 3-Image Preview Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr] gap-5 w-full">
+              {room.gallery[0] && (
+                <div 
+                  className="relative h-[500px] md:h-[800px] w-full cursor-pointer group"
+                  onClick={() => { setCurrentSlide(0); setIsGalleryOpen(true); }}
+                >
+                  <img src={room.gallery[0]} alt="Feature View" className="w-full h-full object-cover block rounded-lg" />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg" />
+                </div>
+              )}
+              <div className="flex flex-col gap-5 h-full">
+                {room.gallery[1] && (
+                  <div 
+                    className="relative h-[240px] md:h-[390px] w-full cursor-pointer group"
+                    onClick={() => { setCurrentSlide(1); setIsGalleryOpen(true); }}
+                  >
+                    <img src={room.gallery[1]} alt="Detail" className="w-full h-full object-cover block rounded-lg" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg" />
+                  </div>
+                )}
+                {room.gallery[2] ? (
+                  <div 
+                    className="relative h-[240px] md:h-[390px] w-full cursor-pointer group"
+                    onClick={() => { setCurrentSlide(2); setIsGalleryOpen(true); }}
+                  >
+                    <img src={room.gallery[2]} alt="Bath Detail" className="w-full h-full object-cover block rounded-lg" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg" />
+                    {/* View More overlay if more than 3 images */}
+                    {room.gallery.length > 3 && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
+                        <span className="text-white text-lg font-bold">+{room.gallery.length - 3} more</span>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </div>
-              <div className="relative h-[240px] md:h-[390px] w-full">
-                <img src={room.gallery[2]} alt="Bath Detail" className="w-full h-full object-cover block" />
-              </div>
             </div>
+
+            {/* View More Button */}
+            {room.gallery.length > 3 && (
+              <div className="mt-8 text-center">
+                <button
+                  onClick={() => { setCurrentSlide(0); setIsGalleryOpen(true); }}
+                  className="px-8 py-3 bg-saffron hover:bg-saffron/90 text-stone-900 font-bold text-sm uppercase tracking-wider rounded-lg transition-colors"
+                >
+                  View All {room.gallery.length} Photos
+                </button>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
+
+      {/* FULLSCREEN GALLERY MODAL */}
+      {isGalleryOpen && room.gallery && (
+        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center">
+          {/* Close Button */}
+          <button
+            onClick={() => setIsGalleryOpen(false)}
+            className="absolute top-4 right-4 md:top-8 md:right-8 text-white/80 hover:text-white p-2 z-10"
+            aria-label="Close gallery"
+          >
+            <X size={32} />
+          </button>
+
+          {/* Image Counter */}
+          <div className="absolute top-4 left-4 md:top-8 md:left-8 text-white/80 text-sm font-medium">
+            {currentSlide + 1} / {room.gallery.length}
+          </div>
+
+          {/* Arrow Left */}
+          <button
+            onClick={() => setCurrentSlide((prev) => (prev === 0 ? room.gallery.length - 1 : prev - 1))}
+            className="absolute left-2 md:left-8 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-2 z-10"
+            aria-label="Previous image"
+          >
+            <ChevronLeft size={48} />
+          </button>
+
+          {/* Current Image */}
+          <div className="w-full h-full flex items-center justify-center p-4 md:p-20">
+            <img
+              src={room.gallery[currentSlide]}
+              alt={`Room view ${currentSlide + 1}`}
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
+
+          {/* Arrow Right */}
+          <button
+            onClick={() => setCurrentSlide((prev) => (prev === room.gallery.length - 1 ? 0 : prev + 1))}
+            className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-2 z-10"
+            aria-label="Next image"
+          >
+            <ChevronRight size={48} />
+          </button>
+
+          {/* Thumbnail Strip */}
+          <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 flex gap-2 max-w-[90vw] overflow-x-auto py-2 px-4">
+            {room.gallery.map((img, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={`flex-shrink-0 w-16 h-12 md:w-20 md:h-14 rounded overflow-hidden border-2 transition-all ${
+                  currentSlide === index ? 'border-saffron' : 'border-transparent opacity-50 hover:opacity-100'
+                }`}
+              >
+                <img src={img} alt="" className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* REVIEWS SECTION */}
       <div className="bg-stone-50 py-24">
@@ -173,7 +327,7 @@ export default function RoomPage() {
 
       {/* MINIMALIST NAVIGATION */}
       <div className="max-w-6xl mx-auto px-6">
-        {nextRoom && prevRoom && (
+        {nextRoom && prevRoom && allRooms.length > 1 && (
           <div className="py-24 flex justify-between items-center">
 
             <Link href={`/rooms/${prevRoom.slug}`} className="group text-left">

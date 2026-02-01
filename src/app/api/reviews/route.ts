@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
 import dbConnect from '@/lib/db';
 import Review from '@/models/Review';
 
@@ -19,6 +20,14 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const room = searchParams.get('room');
         const showAll = searchParams.get('all') === 'true';
+
+        // If requesting all reviews (including unapproved), must be admin
+        if (showAll) {
+            const session = await auth();
+            if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            }
+        }
 
         // Build query
         const query: any = {};
@@ -57,22 +66,31 @@ export async function GET(request: Request) {
 /**
  * POST /api/reviews
  * 
- * Submits a new review.
- * Body: { roomSlug, rating, comment, guestName, guestEmail }
- * 
- * Reviews are auto-published. Admin can delete inappropriate ones.
+ * Submits a new review. Requires authentication.
+ * Body: { roomSlug, rating, comment }
+ * Guest info pulled from session.
  */
 export async function POST(request: Request) {
     try {
+        // Auth check - must be logged in to leave a review
+        const session = await auth();
+        if (!session?.user) {
+            return NextResponse.json({ error: 'Please log in to leave a review' }, { status: 401 });
+        }
+
         await dbConnect();
 
         const body = await request.json();
-        const { roomSlug, rating, comment, guestName, guestEmail } = body;
+        const { roomSlug, rating, comment } = body;
+
+        // Use session data for guest info (prevents impersonation)
+        const guestName = session.user.name || 'Guest';
+        const guestEmail = session.user.email!;
 
         // Validate required fields
-        if (!roomSlug || !rating || !guestName || !guestEmail) {
+        if (!roomSlug || !rating) {
             return NextResponse.json(
-                { error: 'Room, rating, name, and email are required' },
+                { error: 'Room and rating are required' },
                 { status: 400 }
             );
         }
@@ -81,6 +99,19 @@ export async function POST(request: Request) {
         if (rating < 1 || rating > 5) {
             return NextResponse.json(
                 { error: 'Rating must be between 1 and 5' },
+                { status: 400 }
+            );
+        }
+
+        // Check if user already reviewed this room
+        const existingReview = await Review.findOne({
+            roomSlug: roomSlug.toLowerCase(),
+            guestEmail: guestEmail.toLowerCase()
+        });
+
+        if (existingReview) {
+            return NextResponse.json(
+                { error: 'You have already reviewed this room' },
                 { status: 400 }
             );
         }

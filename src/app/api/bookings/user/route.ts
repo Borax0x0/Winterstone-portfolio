@@ -1,27 +1,28 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
 import dbConnect from '@/lib/db';
 import Booking from '@/models/Booking';
 
-// GET /api/bookings/user?email=xxx
-export async function GET(request: Request) {
+// GET /api/bookings/user - Get current user's bookings
+export async function GET() {
     try {
-        await dbConnect();
-
-        const { searchParams } = new URL(request.url);
-        const email = searchParams.get('email');
-
-        if (!email) {
-            return NextResponse.json({ error: 'Email parameter required' }, { status: 400 });
+        const session = await auth();
+        
+        // Must be logged in
+        if (!session?.user?.email) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Find all bookings for this email, sorted by newest first
-        const bookings = await Booking.find({ email: email.toLowerCase() })
+        await dbConnect();
+
+        // Get bookings for the logged-in user only (no email param needed - uses session)
+        const bookings = await Booking.find({ email: session.user.email.toLowerCase() })
             .sort({ createdAt: -1 })
             .lean();
 
         return NextResponse.json(bookings);
     } catch (error: any) {
         console.error('Error fetching user bookings:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 });
     }
 }

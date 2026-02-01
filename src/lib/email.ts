@@ -244,3 +244,64 @@ export async function sendBookingConfirmationEmail(params: {
         text: `Dear ${params.user_name}, Your booking at Winterstone Lodge is confirmed. Room: ${params.room_name}, Check-in: ${params.check_in}, Check-out: ${params.check_out}, Total: ${params.total_price}`,
     });
 }
+
+// Password reset email template
+export async function sendPasswordResetEmail(
+    toEmail: string,
+    toName: string,
+    resetUrl: string
+): Promise<boolean> {
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <body style="margin:0;padding:0;font-family:Georgia,serif;background:#f5f5f4;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
+            <tr><td align="center">
+                <table width="600" style="max-width:600px;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background:#1c1917;padding:32px;text-align:center;">
+                            <h1 style="margin:0;color:#fff;font-size:24px;letter-spacing:8px;font-weight:normal;">WINTERSTONE</h1>
+                            <p style="margin:6px 0 0;color:#d4a853;font-size:9px;letter-spacing:3px;">The Silent Valley</p>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding:40px 32px;">
+                            <p style="margin:0;color:#1c1917;font-size:18px;">Hello ${toName},</p>
+                            <p style="margin:16px 0 24px;color:#57534e;font-size:14px;line-height:1.7;">
+                                We received a request to reset your password. Click the button below to create a new password.
+                            </p>
+                            <a href="${resetUrl}" style="display:inline-block;background:#d4a853;color:#1c1917;padding:14px 32px;text-decoration:none;font-size:12px;letter-spacing:2px;font-weight:bold;">
+                                RESET PASSWORD
+                            </a>
+                            <p style="margin:24px 0 0;color:#a8a29e;font-size:12px;">
+                                This link expires in 1 hour.
+                            </p>
+                            <p style="margin:16px 0 0;color:#a8a29e;font-size:12px;">
+                                If you didn't request this, you can safely ignore this email.
+                            </p>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background:#1c1917;padding:24px;text-align:center;">
+                            <p style="margin:0;color:#78716c;font-size:10px;">
+                                Bhagsunag Road, Mcleodganj, HP 176216
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td></tr>
+        </table>
+    </body>
+    </html>
+    `;
+
+    return sendEmail({
+        to: toEmail,
+        subject: 'Reset Your Password - Winterstone Lodge',
+        html,
+        text: `Hello ${toName}, Reset your password by visiting: ${resetUrl} - This link expires in 1 hour.`,
+    });
+}

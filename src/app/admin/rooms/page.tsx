@@ -1,0 +1,569 @@
+"use client";
+
+import React, { useState, useEffect, useRef } from "react";
+import { Plus, Pencil, Trash2, Image, X, Upload, GripVertical, Save } from "lucide-react";
+import toast from "react-hot-toast";
+
+interface Room {
+    _id: string;
+    slug: string;
+    name: string;
+    price: number;
+    description: string;
+    amenities: string[];
+    heroImage: string;
+    gallery: string[];
+    isActive: boolean;
+    displayOrder: number;
+}
+
+export default function RoomsPage() {
+    const [rooms, setRooms] = useState<Room[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [editingRoom, setEditingRoom] = useState<Room | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isNewRoom, setIsNewRoom] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploadType, setUploadType] = useState<'hero' | 'gallery'>('gallery');
+
+    // Form state for editing/creating
+    const [formData, setFormData] = useState({
+        slug: '',
+        name: '',
+        price: 0,
+        description: '',
+        amenities: [] as string[],
+        heroImage: '',
+        gallery: [] as string[],
+        isActive: true,
+    });
+    const [newAmenity, setNewAmenity] = useState('');
+
+    // Fetch rooms
+    const fetchRooms = async () => {
+        try {
+            const res = await fetch('/api/rooms');
+            if (res.ok) {
+                const data = await res.json();
+                setRooms(data);
+            }
+        } catch (error) {
+            toast.error('Failed to fetch rooms');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchRooms();
+    }, []);
+
+    // Open modal for new room
+    const handleNewRoom = () => {
+        setFormData({
+            slug: '',
+            name: '',
+            price: 0,
+            description: '',
+            amenities: [],
+            heroImage: '/placeholder-room.jpg',
+            gallery: [],
+            isActive: true,
+        });
+        setIsNewRoom(true);
+        setEditingRoom(null);
+        setIsModalOpen(true);
+    };
+
+    // Open modal for editing
+    const handleEdit = (room: Room) => {
+        setFormData({
+            slug: room.slug,
+            name: room.name,
+            price: room.price,
+            description: room.description,
+            amenities: room.amenities,
+            heroImage: room.heroImage,
+            gallery: room.gallery,
+            isActive: room.isActive,
+        });
+        setIsNewRoom(false);
+        setEditingRoom(room);
+        setIsModalOpen(true);
+    };
+
+    // Save room (create or update)
+    const handleSave = async () => {
+        try {
+            if (isNewRoom) {
+                const res = await fetch('/api/rooms', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData),
+                });
+                if (!res.ok) {
+                    const error = await res.json();
+                    throw new Error(error.error);
+                }
+                toast.success('Room created successfully');
+            } else if (editingRoom) {
+                const res = await fetch(`/api/rooms/${editingRoom.slug}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData),
+                });
+                if (!res.ok) {
+                    const error = await res.json();
+                    throw new Error(error.error);
+                }
+                toast.success('Room updated successfully');
+            }
+            setIsModalOpen(false);
+            fetchRooms();
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to save room');
+        }
+    };
+
+    // Delete room
+    const handleDelete = async (room: Room) => {
+        if (!confirm(`Are you sure you want to delete "${room.name}"? This cannot be undone.`)) {
+            return;
+        }
+        try {
+            const res = await fetch(`/api/rooms/${room.slug}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Failed to delete');
+            toast.success('Room deleted');
+            fetchRooms();
+        } catch (error) {
+            toast.error('Failed to delete room');
+        }
+    };
+
+    // Handle image upload
+    const handleImageUpload = async (file: File) => {
+        if (!editingRoom && !isNewRoom) return;
+
+        setUploadingImage(true);
+        const formDataUpload = new FormData();
+        formDataUpload.append('image', file);
+        formDataUpload.append('type', uploadType);
+
+        try {
+            // For new rooms, we need to save the room first
+            if (isNewRoom) {
+                toast.error('Please save the room first before uploading images');
+                return;
+            }
+
+            const res = await fetch(`/api/rooms/${editingRoom!.slug}/images`, {
+                method: 'POST',
+                body: formDataUpload,
+            });
+
+            if (!res.ok) {
+                const error = await res.json();
+                throw new Error(error.error);
+            }
+
+            const data = await res.json();
+            
+            if (uploadType === 'hero') {
+                setFormData(prev => ({ ...prev, heroImage: data.imageUrl }));
+            } else {
+                setFormData(prev => ({ ...prev, gallery: [...prev.gallery, data.imageUrl] }));
+            }
+            
+            toast.success('Image uploaded successfully');
+            fetchRooms();
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to upload image');
+        } finally {
+            setUploadingImage(false);
+        }
+    };
+
+    // Remove gallery image
+    const handleRemoveGalleryImage = async (imageUrl: string) => {
+        if (!editingRoom) return;
+
+        try {
+            const res = await fetch(`/api/rooms/${editingRoom.slug}/images`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageUrl }),
+            });
+
+            if (!res.ok) {
+                const error = await res.json();
+                throw new Error(error.error);
+            }
+
+            setFormData(prev => ({
+                ...prev,
+                gallery: prev.gallery.filter(img => img !== imageUrl)
+            }));
+            toast.success('Image removed');
+            fetchRooms();
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to remove image');
+        }
+    };
+
+    // Add amenity
+    const handleAddAmenity = () => {
+        if (newAmenity.trim()) {
+            setFormData(prev => ({
+                ...prev,
+                amenities: [...prev.amenities, newAmenity.trim()]
+            }));
+            setNewAmenity('');
+        }
+    };
+
+    // Remove amenity
+    const handleRemoveAmenity = (index: number) => {
+        setFormData(prev => ({
+            ...prev,
+            amenities: prev.amenities.filter((_, i) => i !== index)
+        }));
+    };
+
+    return (
+        <div>
+            {/* HEADER */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <div>
+                    <h1 className="text-3xl font-serif font-bold text-white">Rooms</h1>
+                    <p className="text-stone-400 text-sm mt-1">Manage room listings, prices, and images</p>
+                </div>
+                <button
+                    onClick={handleNewRoom}
+                    className="flex items-center gap-2 bg-saffron hover:bg-saffron/90 text-stone-900 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+                >
+                    <Plus size={18} />
+                    Add Room
+                </button>
+            </div>
+
+            {/* ROOMS GRID */}
+            {isLoading ? (
+                <div className="flex justify-center items-center py-20">
+                    <div className="animate-spin h-8 w-8 border-2 border-saffron border-t-transparent rounded-full"></div>
+                </div>
+            ) : rooms.length === 0 ? (
+                <div className="bg-white rounded-lg border border-stone-200 p-12 text-center">
+                    <Image size={48} className="mx-auto text-stone-300 mb-4" />
+                    <h3 className="text-lg font-bold text-stone-700 mb-2">No Rooms Yet</h3>
+                    <p className="text-stone-500 mb-6">Create your first room to get started</p>
+                    <button
+                        onClick={handleNewRoom}
+                        className="bg-saffron hover:bg-saffron/90 text-stone-900 px-6 py-2 rounded-lg font-bold text-sm"
+                    >
+                        Add Your First Room
+                    </button>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {rooms.map((room) => (
+                        <div
+                            key={room._id}
+                            className="bg-white rounded-lg border border-stone-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                        >
+                            {/* Room Image */}
+                            <div className="relative h-48 bg-stone-100">
+                                <img
+                                    src={room.heroImage}
+                                    alt={room.name}
+                                    className="w-full h-full object-cover"
+                                />
+                                {!room.isActive && (
+                                    <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+                                        Inactive
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Room Info */}
+                            <div className="p-4">
+                                <div className="flex justify-between items-start mb-2">
+                                    <h3 className="font-bold text-lg text-stone-900">{room.name}</h3>
+                                    <span className="text-saffron font-bold">₹{room.price.toLocaleString()}</span>
+                                </div>
+                                <p className="text-stone-500 text-sm line-clamp-2 mb-4">
+                                    {room.description}
+                                </p>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs text-stone-400">
+                                        {room.gallery.length} gallery images
+                                    </span>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleEdit(room)}
+                                            className="p-2 text-stone-400 hover:text-saffron hover:bg-stone-100 rounded transition-colors"
+                                            title="Edit Room"
+                                        >
+                                            <Pencil size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(room)}
+                                            className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                            title="Delete Room"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* EDIT/CREATE MODAL */}
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-stone-200 sticky top-0 bg-white z-10">
+                            <h2 className="text-xl font-bold text-stone-900">
+                                {isNewRoom ? 'Create New Room' : `Edit: ${editingRoom?.name}`}
+                            </h2>
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="p-2 hover:bg-stone-100 rounded-lg transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 space-y-6">
+                            {/* Basic Info */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-stone-700 mb-2">
+                                        Room Name *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                                        className="w-full px-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-saffron"
+                                        placeholder="e.g., Skyline Haven"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-stone-700 mb-2">
+                                        Slug * {isNewRoom && <span className="font-normal text-stone-400">(URL-friendly)</span>}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.slug}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') }))}
+                                        disabled={!isNewRoom}
+                                        className="w-full px-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-saffron disabled:bg-stone-50 disabled:text-stone-500"
+                                        placeholder="e.g., skyline-haven"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-stone-700 mb-2">
+                                        Price per Night (₹) *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={formData.price}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, price: parseInt(e.target.value) || 0 }))}
+                                        className="w-full px-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-saffron"
+                                        placeholder="8500"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-4 pt-8">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.isActive}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
+                                            className="w-4 h-4 accent-saffron"
+                                        />
+                                        <span className="text-sm text-stone-700">Active (visible on website)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-stone-700 mb-2">
+                                    Description *
+                                </label>
+                                <textarea
+                                    value={formData.description}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                                    rows={4}
+                                    className="w-full px-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-saffron resize-none"
+                                    placeholder="Describe the room experience..."
+                                />
+                            </div>
+
+                            {/* Amenities */}
+                            <div>
+                                <label className="block text-sm font-bold text-stone-700 mb-2">
+                                    Amenities
+                                </label>
+                                <div className="flex gap-2 mb-3">
+                                    <input
+                                        type="text"
+                                        value={newAmenity}
+                                        onChange={(e) => setNewAmenity(e.target.value)}
+                                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddAmenity())}
+                                        className="flex-1 px-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-saffron"
+                                        placeholder="Add amenity..."
+                                    />
+                                    <button
+                                        onClick={handleAddAmenity}
+                                        className="px-4 py-2 bg-stone-100 hover:bg-stone-200 rounded-lg transition-colors"
+                                    >
+                                        <Plus size={18} />
+                                    </button>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {formData.amenities.map((amenity, index) => (
+                                        <span
+                                            key={index}
+                                            className="flex items-center gap-1 bg-stone-100 px-3 py-1 rounded-full text-sm"
+                                        >
+                                            {amenity}
+                                            <button
+                                                onClick={() => handleRemoveAmenity(index)}
+                                                className="hover:text-red-500"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Hero Image */}
+                            <div>
+                                <label className="block text-sm font-bold text-stone-700 mb-2">
+                                    Hero Image (Main Cover)
+                                </label>
+                                <div className="flex gap-4 items-start">
+                                    <div className="w-48 h-32 bg-stone-100 rounded-lg overflow-hidden border border-stone-200">
+                                        <img
+                                            src={formData.heroImage || '/placeholder-room.jpg'}
+                                            alt="Hero"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <input
+                                            type="text"
+                                            value={formData.heroImage}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, heroImage: e.target.value }))}
+                                            className="w-full px-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-saffron mb-2"
+                                            placeholder="/images/room-hero.jpg"
+                                        />
+                                        {!isNewRoom && (
+                                            <button
+                                                onClick={() => {
+                                                    setUploadType('hero');
+                                                    fileInputRef.current?.click();
+                                                }}
+                                                disabled={uploadingImage}
+                                                className="flex items-center gap-2 text-sm text-saffron hover:underline disabled:opacity-50"
+                                            >
+                                                <Upload size={14} />
+                                                {uploadingImage ? 'Uploading...' : 'Upload new hero image'}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Gallery Images */}
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="block text-sm font-bold text-stone-700">
+                                        Gallery Images
+                                    </label>
+                                    {!isNewRoom && (
+                                        <button
+                                            onClick={() => {
+                                                setUploadType('gallery');
+                                                fileInputRef.current?.click();
+                                            }}
+                                            disabled={uploadingImage}
+                                            className="flex items-center gap-1 text-sm text-saffron hover:underline disabled:opacity-50"
+                                        >
+                                            <Plus size={14} />
+                                            Add Image
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {formData.gallery.map((img, index) => (
+                                        <div key={index} className="relative group">
+                                            <div className="aspect-video bg-stone-100 rounded-lg overflow-hidden border border-stone-200">
+                                                <img
+                                                    src={img}
+                                                    alt={`Gallery ${index + 1}`}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                            <button
+                                                onClick={() => handleRemoveGalleryImage(img)}
+                                                className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {formData.gallery.length === 0 && (
+                                        <div className="col-span-3 py-8 text-center text-stone-400 text-sm border-2 border-dashed border-stone-200 rounded-lg">
+                                            {isNewRoom ? 'Save room first to upload images' : 'No gallery images yet'}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Hidden file input */}
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleImageUpload(file);
+                                    e.target.value = '';
+                                }}
+                            />
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="flex items-center justify-end gap-3 p-6 border-t border-stone-200 sticky bottom-0 bg-white">
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="px-6 py-2 text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                className="flex items-center gap-2 px-6 py-2 bg-saffron hover:bg-saffron/90 text-stone-900 font-bold rounded-lg transition-colors"
+                            >
+                                <Save size={16} />
+                                {isNewRoom ? 'Create Room' : 'Save Changes'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}

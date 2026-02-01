@@ -2,13 +2,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { LayoutDashboard, BookKey, Users, Settings, LogOut, MessageSquare, ShieldCheck, X, ChevronRight } from "lucide-react";
+import { LayoutDashboard, BookKey, Users, Settings, LogOut, MessageSquare, ShieldCheck, X, ChevronRight, BedDouble } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
 
 const navItems = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Bookings", href: "/admin/bookings", icon: BookKey },
+    { name: "Rooms", href: "/admin/rooms", icon: BedDouble },
     { name: "Reviews", href: "/admin/reviews", icon: MessageSquare },
     { name: "Team", href: "/admin/team", icon: Users },
     { name: "Guests", href: "/admin/guests", icon: Users },
