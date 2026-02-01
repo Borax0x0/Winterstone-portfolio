@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
 import dbConnect from '@/lib/db';
 import Review from '@/models/Review';
 
@@ -13,6 +14,12 @@ export async function PATCH(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        // Auth check - admin only
+        const session = await auth();
+        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         await dbConnect();
 
         const { id } = await params;
@@ -42,13 +49,19 @@ export async function PATCH(
 /**
  * DELETE /api/reviews/[id]
  * 
- * Permanently deletes a review.
+ * Permanently deletes a review. Admin only.
  */
 export async function DELETE(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        // Auth check - admin only
+        const session = await auth();
+        if (!session?.user || !['admin', 'superadmin'].includes((session.user as any).role)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         await dbConnect();
 
         const { id } = await params;

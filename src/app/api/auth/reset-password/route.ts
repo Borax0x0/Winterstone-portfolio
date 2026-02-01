@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import { v4 as uuidv4 } from 'uuid';
+import { sendPasswordResetEmail } from '@/lib/email';
 
 /**
  * POST /api/auth/reset-password
@@ -43,16 +44,19 @@ export async function POST(request: Request) {
         // Build reset URL
         const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
 
-        // In dev: log the URL. In prod: send email
+        // Send password reset email
+        const emailSent = await sendPasswordResetEmail(user.email, user.name, resetUrl);
+
+        // Log URL in dev for debugging
         console.log('=================================');
-        console.log('PASSWORD RESET LINK:');
-        console.log(resetUrl);
+        console.log('PASSWORD RESET LINK:', resetUrl);
+        console.log('Email sent:', emailSent ? 'YES' : 'NO');
         console.log('=================================');
 
         return NextResponse.json({
-            message: 'If an account exists with this email, you will receive a reset link.',
-            // Include URL in dev for testing
-            resetUrl: process.env.NODE_ENV === 'development' ? resetUrl : undefined,
+            message: emailSent 
+                ? 'If an account exists with this email, you will receive a reset link.'
+                : 'Password reset requested. Check console for link (email service unavailable).',
         });
 
     } catch (error: any) {
