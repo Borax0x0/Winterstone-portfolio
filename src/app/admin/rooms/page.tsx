@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Plus, Pencil, Trash2, Image as ImageIcon, X, Upload, Save } from "lucide-react";
+import { Plus, Pencil, Trash2, Image as ImageIcon, X, Upload, Save, DoorOpen, Home } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface Room {
@@ -18,12 +18,29 @@ interface Room {
     displayOrder: number;
 }
 
+interface RoomUnit {
+    _id: string;
+    name: string;
+    roomTypeSlug: string;
+    isActive: boolean;
+}
+
 export default function RoomsPage() {
     const [rooms, setRooms] = useState<Room[]>([]);
+    const [units, setUnits] = useState<RoomUnit[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    
+    // Room Modal State
     const [editingRoom, setEditingRoom] = useState<Room | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isNewRoom, setIsNewRoom] = useState(false);
+    
+    // Inventory Modal State
+    const [isInventoryOpen, setIsInventoryOpen] = useState(false);
+    const [selectedRoomForInventory, setSelectedRoomForInventory] = useState<Room | null>(null);
+    const [newUnitName, setNewUnitName] = useState("");
+    const [isAddingUnit, setIsAddingUnit] = useState(false);
+
     const [uploadingImage, setUploadingImage] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadType, setUploadType] = useState<'hero' | 'gallery'>('gallery');
@@ -41,23 +58,31 @@ export default function RoomsPage() {
     });
     const [newAmenity, setNewAmenity] = useState('');
 
-    // Fetch rooms
-    const fetchRooms = async () => {
+    // Fetch rooms & units
+    const fetchData = async () => {
         try {
-            const res = await fetch('/api/rooms');
-            if (res.ok) {
-                const data = await res.json();
+            const [roomsRes, unitsRes] = await Promise.all([
+                fetch('/api/rooms'),
+                fetch('/api/rooms/units')
+            ]);
+            
+            if (roomsRes.ok) {
+                const data = await roomsRes.json();
                 setRooms(data);
             }
+            if (unitsRes.ok) {
+                const data = await unitsRes.json();
+                setUnits(data);
+            }
         } catch {
-            toast.error('Failed to fetch rooms');
+            toast.error('Failed to fetch data');
         } finally {
             setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchRooms();
+        fetchData();
     }, []);
 
     // Open modal for new room
@@ -121,7 +146,7 @@ export default function RoomsPage() {
                 toast.success('Room updated successfully');
             }
             setIsModalOpen(false);
-            fetchRooms();
+            fetchData();
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to save room';
             toast.error(errorMessage);
@@ -137,7 +162,7 @@ export default function RoomsPage() {
             const res = await fetch(`/api/rooms/${room.slug}`, { method: 'DELETE' });
             if (!res.ok) throw new Error('Failed to delete');
             toast.success('Room deleted');
-            fetchRooms();
+            fetchData();
         } catch {
             toast.error('Failed to delete room');
         }
@@ -178,7 +203,7 @@ export default function RoomsPage() {
             }
             
             toast.success('Image uploaded successfully');
-            fetchRooms();
+            fetchData();
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
             toast.error(errorMessage);
@@ -208,7 +233,7 @@ export default function RoomsPage() {
                 gallery: prev.gallery.filter(img => img !== imageUrl)
             }));
             toast.success('Image removed');
-            fetchRooms();
+            fetchData();
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to remove image';
             toast.error(errorMessage);
@@ -232,6 +257,53 @@ export default function RoomsPage() {
             ...prev,
             amenities: prev.amenities.filter((_, i) => i !== index)
         }));
+    };
+
+    // Handle Inventory Modal
+    const handleOpenInventory = (room: Room) => {
+        setSelectedRoomForInventory(room);
+        setNewUnitName("");
+        setIsInventoryOpen(true);
+    };
+
+    // Add Unit
+    const handleAddUnit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedRoomForInventory || !newUnitName.trim()) return;
+
+        setIsAddingUnit(true);
+        try {
+            const res = await fetch('/api/rooms/units', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: newUnitName,
+                    roomTypeSlug: selectedRoomForInventory.slug,
+                }),
+            });
+
+            if (!res.ok) throw new Error('Failed to add unit');
+            
+            toast.success('Unit added');
+            setNewUnitName("");
+            fetchData(); // Refresh list to see new unit
+        } catch (error) {
+            toast.error("Failed to add unit");
+        } finally {
+            setIsAddingUnit(false);
+        }
+    };
+
+    // Delete Unit
+    const handleDeleteUnit = async (id: string) => {
+        if (!confirm("Delete this physical room?")) return;
+        try {
+            await fetch(`/api/rooms/units?id=${id}`, { method: 'DELETE' });
+            toast.success('Unit deleted');
+            setUnits(prev => prev.filter(u => u._id !== id));
+        } catch (error) {
+            toast.error("Failed to delete unit");
+        }
     };
 
     return (
@@ -300,9 +372,16 @@ export default function RoomsPage() {
                                     {room.description}
                                 </p>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs text-stone-400">
-                                        {room.gallery.length} gallery images
-                                    </span>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleOpenInventory(room)}
+                                            className="flex items-center gap-1 px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded text-xs font-bold uppercase tracking-wider transition-colors"
+                                            title="Manage Inventory"
+                                        >
+                                            <DoorOpen size={14} />
+                                            {units.filter(u => u.roomTypeSlug === room.slug).length} Units
+                                        </button>
+                                    </div>
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => handleEdit(room)}
@@ -567,6 +646,75 @@ export default function RoomsPage() {
                                 <Save size={16} />
                                 {isNewRoom ? 'Create Room' : 'Save Changes'}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* INVENTORY MODAL */}
+            {isInventoryOpen && selectedRoomForInventory && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="bg-stone-50 p-6 border-b border-stone-200 flex justify-between items-center">
+                            <div>
+                                <h3 className="font-bold text-lg text-stone-900">Manage Inventory</h3>
+                                <p className="text-stone-500 text-sm">{selectedRoomForInventory.name}</p>
+                            </div>
+                            <button
+                                onClick={() => setIsInventoryOpen(false)}
+                                className="p-2 hover:bg-stone-200 rounded-full transition-colors"
+                            >
+                                <X size={20} className="text-stone-500" />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-6">
+                            {/* Add Form */}
+                            <form onSubmit={handleAddUnit} className="flex gap-2 mb-6">
+                                <input
+                                    type="text"
+                                    value={newUnitName}
+                                    onChange={(e) => setNewUnitName(e.target.value)}
+                                    placeholder="Unit Name (e.g. 101)"
+                                    className="flex-1 px-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-saffron"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={isAddingUnit || !newUnitName.trim()}
+                                    className="px-4 py-2 bg-stone-900 text-white font-bold rounded-lg hover:bg-saffron hover:text-stone-900 transition-colors disabled:opacity-50"
+                                >
+                                    {isAddingUnit ? "..." : <Plus size={20} />}
+                                </button>
+                            </form>
+
+                            {/* List */}
+                            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                                {units.filter(u => u.roomTypeSlug === selectedRoomForInventory.slug).length > 0 ? (
+                                    units
+                                        .filter(u => u.roomTypeSlug === selectedRoomForInventory.slug)
+                                        .map(unit => (
+                                            <div key={unit._id} className="flex justify-between items-center p-3 bg-stone-50 border border-stone-100 rounded-lg group">
+                                                <div className="flex items-center gap-3">
+                                                    <Home size={16} className="text-stone-400" />
+                                                    <span className="font-medium text-stone-700">{unit.name}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleDeleteUnit(unit._id)}
+                                                    className="text-stone-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        ))
+                                ) : (
+                                    <div className="text-center py-8 text-stone-400 text-sm border-2 border-dashed border-stone-100 rounded-lg">
+                                        No physical rooms added yet.
+                                        <br />
+                                        Availability defaults to 1.
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

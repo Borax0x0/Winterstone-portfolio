@@ -1,14 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Eye, XCircle, CheckCircle, Clock } from "lucide-react";
-import { useBookings, BookingStatus } from "@/context/BookingContext";
+import { Search, Eye, XCircle, CheckCircle, Clock, X, MessageSquare } from "lucide-react";
+import { useBookings, BookingStatus, Booking } from "@/context/BookingContext";
 import toast from "react-hot-toast";
 
 export default function BookingsPage() {
     const { bookings, updateBookingStatus, isLoading } = useBookings();
     const [filterStatus, setFilterStatus] = useState<BookingStatus | "All">("All");
     const [searchTerm, setSearchTerm] = useState("");
+    const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
     // Filter Logic
     const filteredBookings = bookings.filter(booking => {
@@ -132,6 +133,12 @@ export default function BookingsPage() {
                                                 <span>In: {booking.checkIn}</span>
                                                 <span>Out: {booking.checkOut}</span>
                                             </div>
+                                            {booking.specialRequests && booking.specialRequests.length > 0 && (
+                                                <div className="mt-1 flex items-center gap-1 text-[10px] text-saffron font-bold">
+                                                    <MessageSquare size={10} />
+                                                    Requests
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 text-sm font-bold text-stone-900">
                                             ₹{booking.totalAmount.toLocaleString()}
@@ -142,6 +149,7 @@ export default function BookingsPage() {
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
+                                                    onClick={() => setSelectedBooking(booking)}
                                                     className="p-2 text-stone-400 hover:text-saffron hover:bg-stone-100 rounded transition-colors"
                                                     title="View Details"
                                                 >
@@ -180,6 +188,103 @@ export default function BookingsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* DETAILS MODAL */}
+            {selectedBooking && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="flex justify-between items-center p-6 border-b border-stone-100">
+                            <h3 className="font-serif text-xl font-bold text-stone-900">Booking Details</h3>
+                            <button 
+                                onClick={() => setSelectedBooking(null)}
+                                className="p-2 hover:bg-stone-100 rounded-full transition-colors"
+                            >
+                                <X size={20} className="text-stone-400" />
+                            </button>
+                        </div>
+                        
+                        <div className="p-6 space-y-6">
+                            {/* Header Info */}
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-xs text-stone-400 uppercase tracking-wider mb-1">Booking ID</p>
+                                    <p className="font-mono text-sm font-bold text-stone-900">
+                                        {selectedBooking._id || selectedBooking.id}
+                                    </p>
+                                </div>
+                                <StatusBadge status={selectedBooking.status} />
+                            </div>
+
+                            {/* Guest & Room */}
+                            <div className="grid grid-cols-2 gap-6 bg-stone-50 p-4 rounded-lg">
+                                <div>
+                                    <p className="text-xs text-stone-400 uppercase tracking-wider mb-1">Guest</p>
+                                    <p className="font-bold text-stone-900 text-sm">{selectedBooking.guestName}</p>
+                                    <p className="text-xs text-stone-500">{selectedBooking.email}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-stone-400 uppercase tracking-wider mb-1">Room</p>
+                                    <p className="font-bold text-stone-900 text-sm">{selectedBooking.roomName}</p>
+                                </div>
+                            </div>
+
+                            {/* Dates & Payment */}
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <p className="text-xs text-stone-400 uppercase tracking-wider mb-1">Stay Dates</p>
+                                    <p className="text-sm text-stone-700">
+                                        <span className="font-semibold">{selectedBooking.checkIn}</span> to <span className="font-semibold">{selectedBooking.checkOut}</span>
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-stone-400 uppercase tracking-wider mb-1">Total Paid</p>
+                                    <p className="text-lg font-serif font-bold text-saffron">₹{selectedBooking.totalAmount.toLocaleString()}</p>
+                                </div>
+                            </div>
+
+                            {/* Special Requests */}
+                            <div>
+                                <p className="text-xs text-stone-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                    <MessageSquare size={12} /> Special Requests
+                                </p>
+                                {selectedBooking.specialRequests && selectedBooking.specialRequests.length > 0 ? (
+                                    <ul className="space-y-2">
+                                        {selectedBooking.specialRequests.map((req, i) => (
+                                            <li key={i} className="text-sm text-stone-700 bg-yellow-50 border border-yellow-100 px-3 py-2 rounded-md flex items-start gap-2">
+                                                <span className="text-yellow-500 mt-1">•</span>
+                                                {req}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-sm text-stone-400 italic bg-stone-50 px-3 py-2 rounded-md">None</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="p-6 bg-stone-50 border-t border-stone-100 flex justify-end gap-3">
+                            <button
+                                onClick={() => setSelectedBooking(null)}
+                                className="px-4 py-2 border border-stone-200 text-stone-600 rounded-lg text-sm font-bold hover:bg-white transition-colors"
+                            >
+                                Close
+                            </button>
+                            {selectedBooking.status !== "Cancelled" && (
+                                <button
+                                    onClick={() => {
+                                        handleCancel(selectedBooking._id || selectedBooking.id!);
+                                        setSelectedBooking(null);
+                                    }}
+                                    className="px-4 py-2 bg-white text-red-600 border border-red-200 rounded-lg text-sm font-bold hover:bg-red-50 transition-colors"
+                                >
+                                    Cancel Booking
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

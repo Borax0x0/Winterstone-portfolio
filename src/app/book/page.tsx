@@ -6,7 +6,7 @@ import Link from "next/link";
 import Script from "next/script";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { ArrowLeft, Calendar, User, Check, Phone, Mail, Loader2, CreditCard } from "lucide-react";
+import { ArrowLeft, Calendar, User, Check, Phone, Mail, Loader2, CreditCard, Clock, MessageSquare } from "lucide-react";
 // Email sent via API route (server-side)
 // PaymentModal removed - logic is handled inline
 import InvoiceModal from "@/components/InvoiceModal";
@@ -62,6 +62,11 @@ function BookingContent() {
   const [checkInDate, setCheckInDate] = useState<Date | null>(null);
   const [checkOutDate, setCheckOutDate] = useState<Date | null>(null);
   const [guests, setGuests] = useState(2);
+  const [specialRequests, setSpecialRequests] = useState<string[]>([]);
+  const [customRequest, setCustomRequest] = useState("");
+  const [availableUnits, setAvailableUnits] = useState<{ _id: string; name: string }[]>([]);
+  const [assignedUnit, setAssignedUnit] = useState("");
+  const [isCheckingUnits, setIsCheckingUnits] = useState(false);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -81,15 +86,47 @@ function BookingContent() {
   // BLOCKED DATES (already booked) - as Date objects for DatePicker
   const [blockedDates, setBlockedDates] = useState<Date[]>([]);
 
+  // SETTINGS (Check-in/out times, Request Options)
+  const [settings, setSettings] = useState({
+    checkInTime: "14:00",
+    checkOutTime: "11:00",
+    specialRequestOptions: [] as string[],
+  });
+
+  // FETCH SETTINGS
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('/api/settings');
+        if (res.ok) {
+          const data = await res.json();
+          setSettings({
+            checkInTime: data.checkInTime || "14:00",
+            checkOutTime: data.checkOutTime || "11:00",
+            specialRequestOptions: data.specialRequestOptions || [],
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch settings:", error);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   // LOAD URL PARAMS (room, checkin, checkout from AvailabilityModal)
   useEffect(() => {
     const roomParam = searchParams.get("room");
     const checkinParam = searchParams.get("checkin");
     const checkoutParam = searchParams.get("checkout");
+    const unitParam = searchParams.get("unit"); // Added unit
 
     if (roomParam) {
       const exists = ROOMS.find(r => r.id === roomParam);
       if (exists) setSelectedRoomId(roomParam);
+    }
+
+    if (unitParam) {
+      setAssignedUnit(unitParam);
     }
 
     // Pre-fill dates from URL (passed from AvailabilityModal)
@@ -131,6 +168,53 @@ function BookingContent() {
   const formatDateForAPI = (date: Date | null) => date ? date.toISOString().split("T")[0] : "";
   const checkIn = formatDateForAPI(checkInDate);
   const checkOut = formatDateForAPI(checkOutDate);
+
+  // FETCH AVAILABLE UNITS
+  useEffect(() => {
+    const fetchAvailableUnits = async () => {
+      if (!selectedRoomId || !checkIn || !checkOut) {
+        setAvailableUnits([]);
+        setAssignedUnit("");
+        return;
+      }
+
+      setIsCheckingUnits(true);
+      setAssignedUnit(""); // Reset selection when dates change
+
+      try {
+        const res = await fetch('/api/rooms/units/available', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomSlug: selectedRoomId, checkIn, checkOut }),
+        });
+
+        if (res.ok) {
+          const units = await res.json();
+          setAvailableUnits(units);
+          // If only 1 unit is available, maybe auto-select? No, let user pick if they want.
+          // Or if 0 units, blockedDates logic should handle it, but this is a double check.
+        }
+      } catch (error) {
+        console.error("Failed to fetch available units", error);
+      } finally {
+        setIsCheckingUnits(false);
+      }
+    };
+
+    // Debounce slightly to avoid rapid calls while picking dates
+    const timeout = setTimeout(fetchAvailableUnits, 500);
+    return () => clearTimeout(timeout);
+  }, [selectedRoomId, checkIn, checkOut]);
+
+  // Helper to format time (e.g. "14:00" -> "2:00 PM")
+  const formatTime = (time: string) => {
+    if (!time) return "";
+    const [hours, minutes] = time.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${minutes} ${ampm}`;
+  };
 
   // CALCULATIONS
   const selectedRoom = ROOMS.find((r) => r.id === selectedRoomId) || ROOMS[0];
@@ -263,6 +347,12 @@ function BookingContent() {
 
       // Let's modify the flow slightly:
       // A. Create Pending Booking locally/via API
+      // Combine selected requests and custom request
+      const finalRequests = [...specialRequests];
+      if (customRequest.trim()) {
+        finalRequests.push(`Other: ${customRequest.trim()}`);
+      }
+
       const newBooking = {
         guestName: name, // Note: Model uses guestName, Check interface
         email,
@@ -271,6 +361,8 @@ function BookingContent() {
         checkOut,
         totalAmount: grandTotal,
         status: "Pending" as const, // Type cast
+        specialRequests: finalRequests, // Added
+        assignedUnit: assignedUnit || undefined, // Pass specific unit if selected
       };
 
       // Use Context to Add (This generates a POST to /api/bookings)
@@ -501,10 +593,12 @@ function BookingContent() {
               </div>
 
               {/* 2. DATES */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">Check In</label>
-                  <div className="relative">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">
+                      Check In <span className="text-stone-500 font-normal ml-1">({formatTime(settings.checkInTime)})</span>
+                    </label>
+                    <div className="relative">
                     <Calendar className="absolute left-4 top-3.5 w-4 h-4 text-stone-400 z-10 pointer-events-none" />
                     <DatePicker
                       selected={checkInDate}
@@ -516,10 +610,12 @@ function BookingContent() {
                       className="w-full pl-12 pr-4 py-3 border border-stone-200 focus:outline-none focus:border-saffron text-sm bg-transparent cursor-pointer"
                     />
                   </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">Check Out</label>
-                  <div className="relative">
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">
+                      Check Out <span className="text-stone-500 font-normal ml-1">({formatTime(settings.checkOutTime)})</span>
+                    </label>
+                    <div className="relative">
                     <Calendar className="absolute left-4 top-3.5 w-4 h-4 text-stone-400 z-10 pointer-events-none" />
                     <DatePicker
                       selected={checkOutDate}
@@ -550,6 +646,39 @@ function BookingContent() {
                   </div>
                 </div>
               </div>
+
+              {/* 2.5 SPECIFIC ROOM SELECTION */}
+              {isDateValid && (
+                <div>
+                  <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">
+                    Select Specific Room
+                    {isCheckingUnits && <span className="ml-2 text-[10px] text-saffron normal-case animate-pulse">Checking availability...</span>}
+                  </label>
+                  
+                  {availableUnits.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {availableUnits.map((unit) => (
+                        <button
+                          key={unit._id}
+                          onClick={() => setAssignedUnit(unit._id)}
+                          className={`flex items-center justify-between p-3 border rounded-sm transition-all text-left ${
+                            assignedUnit === unit._id
+                              ? "border-saffron bg-stone-50 ring-1 ring-saffron"
+                              : "border-stone-200 hover:border-stone-400"
+                          }`}
+                        >
+                          <span className="text-sm font-medium text-stone-800">{unit.name}</span>
+                          {assignedUnit === unit._id && <Check className="w-4 h-4 text-saffron" />}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-stone-50 border border-stone-100 text-stone-500 text-sm italic">
+                      {isCheckingUnits ? "Loading rooms..." : "System will assign the best available room automatically."}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* 3. PERSONAL DETAILS */}
               <div>
@@ -593,6 +722,51 @@ function BookingContent() {
                   </div>
                 </div>
               </div>
+
+
+              {/* 4. SPECIAL REQUESTS */}
+              <div>
+                <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">Special Requests</label>
+                <div className="bg-stone-50 p-4 border border-stone-100 rounded-sm space-y-4">
+                  
+                  {/* Options */}
+                  {settings.specialRequestOptions.length > 0 && (
+                    <div className="flex flex-wrap gap-3">
+                      {settings.specialRequestOptions.map((option) => (
+                        <label key={option} className="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 border border-stone-200 rounded-sm hover:border-saffron transition-colors">
+                          <input
+                            type="checkbox"
+                            className="accent-saffron w-4 h-4"
+                            checked={specialRequests.includes(option)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSpecialRequests([...specialRequests, option]);
+                              } else {
+                                setSpecialRequests(specialRequests.filter(r => r !== option));
+                              }
+                            }}
+                          />
+                          <span className="text-sm text-stone-600">{option}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Custom Request */}
+                  <div className="relative">
+                    <MessageSquare className="absolute left-4 top-3.5 w-4 h-4 text-stone-400" />
+                    <textarea
+                      placeholder="Any other specific requests? (e.g. Dietary restrictions, Accessibility needs)"
+                      value={customRequest}
+                      onChange={(e) => setCustomRequest(e.target.value)}
+                      rows={3}
+                      className="w-full pl-12 pr-4 py-3 border border-stone-200 focus:outline-none focus:border-saffron text-sm resize-none bg-white"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-stone-400 mt-2 ml-1">* Special requests are subject to availability and may incur additional charges.</p>
+              </div>
+
             </div>
           </div>
 

@@ -14,6 +14,7 @@ export interface Booking {
     checkOut: string;
     totalAmount: number;
     status: BookingStatus;
+    specialRequests?: string[]; // Added
 }
 
 interface PaymentOrder {

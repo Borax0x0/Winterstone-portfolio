@@ -13,6 +13,8 @@ export interface IBooking extends Document {
     paymentStatus: "Pending" | "Paid" | "Failed";
     razorpayOrderId?: string;
     razorpayPaymentId?: string;
+    specialRequests?: string[]; // Added
+    assignedUnit?: string; // ID of the specific RoomUnit
     createdAt: Date;
     updatedAt: Date;
 }
@@ -37,6 +39,8 @@ const BookingSchema: Schema<IBooking> = new Schema(
         },
         razorpayOrderId: { type: String },
         razorpayPaymentId: { type: String },
+        specialRequests: { type: [String], default: [] }, // Added
+        assignedUnit: { type: String },
     },
     {
         timestamps: true,

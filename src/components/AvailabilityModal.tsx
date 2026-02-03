@@ -12,6 +12,7 @@ interface AvailabilityModalProps {
   roomName: string;
   roomSlug: string;
   pricePerNight: number;
+  unitId?: string; // Specific Unit
 }
 
 export default function AvailabilityModal({
@@ -19,7 +20,8 @@ export default function AvailabilityModal({
   onClose,
   roomName,
   roomSlug,
-  pricePerNight
+  pricePerNight,
+  unitId
 }: AvailabilityModalProps) {
   const router = useRouter();
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -45,7 +47,12 @@ export default function AvailabilityModal({
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     try {
-      const res = await fetch(`/api/bookings/availability?room=${roomSlug}`, {
+      // If unitId is provided, check specific unit availability
+      const url = unitId 
+        ? `/api/bookings/availability?room=${roomSlug}&unit=${unitId}`
+        : `/api/bookings/availability?room=${roomSlug}`;
+
+      const res = await fetch(url, {
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
@@ -68,14 +75,14 @@ export default function AvailabilityModal({
     } finally {
       setIsLoadingDates(false);
     }
-  }, [roomSlug]);
+  }, [roomSlug, unitId]);
 
   // Fetch blocked dates from API when modal opens
   useEffect(() => {
     if (isOpen && roomSlug) {
       fetchBlockedDates();
     }
-  }, [isOpen, roomSlug, fetchBlockedDates]);
+  }, [isOpen, roomSlug, unitId, fetchBlockedDates]);
 
   if (!isOpen) return null;
 
@@ -101,7 +108,17 @@ export default function AvailabilityModal({
 
   const handleBooking = () => {
     if (startDate && endDate) {
-      router.push(`/book?room=${roomSlug}&checkin=${startDate.toISOString()}&checkout=${endDate.toISOString()}`);
+      const queryParams = new URLSearchParams({
+        room: roomSlug,
+        checkin: startDate.toISOString(),
+        checkout: endDate.toISOString(),
+      });
+      
+      if (unitId) {
+        queryParams.append('unit', unitId);
+      }
+
+      router.push(`/book?${queryParams.toString()}`);
     }
   };
 

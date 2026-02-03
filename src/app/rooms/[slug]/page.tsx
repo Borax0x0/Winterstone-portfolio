@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams } from "next/navigation";
-import { ArrowLeft, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, X, Clock } from "lucide-react";
 import AvailabilityModal from "@/components/AvailabilityModal";
 import ReviewForm from "@/components/ReviewForm";
 import ReviewsList from "@/components/ReviewsList";
@@ -55,21 +55,40 @@ export default function RoomPage() {
   const params = useParams();
   const [room, setRoom] = useState<Room | null>(null);
   const [allRooms, setAllRooms] = useState<Room[]>([]);
+  const [units, setUnits] = useState<{ _id: string; name: string; isActive: boolean }[]>([]); // Added units state
+  const [selectedUnit, setSelectedUnit] = useState<string | null>(null); // Track selected unit for modal
+
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [settings, setSettings] = useState<{ checkInTime: string; checkOutTime: string } | null>(null);
 
   // Fetch room data from API
   useEffect(() => {
     const fetchRoomData = async () => {
       try {
-        // Fetch all rooms for navigation (no-store to always get fresh data)
-        const allRes = await fetch('/api/rooms', { cache: 'no-store' });
+        const [allRes, settingsRes, unitsRes] = await Promise.all([
+          fetch('/api/rooms', { cache: 'no-store' }),
+          fetch('/api/settings', { cache: 'no-store' }),
+          fetch('/api/rooms/units', { cache: 'no-store' }) // Fetch units
+        ]);
+
         let roomsData: Room[] = [];
         
         if (allRes.ok) {
           roomsData = await allRes.json();
+        }
+
+        if (settingsRes.ok) {
+          const settingsData = await settingsRes.json();
+          setSettings(settingsData);
+        }
+
+        // Filter units for current room
+        if (unitsRes.ok) {
+          const allUnits = await unitsRes.json();
+          setUnits(allUnits.filter((u: any) => u.roomTypeSlug === params.slug && u.isActive));
         }
 
         // If no rooms in database, use fallback
@@ -120,16 +139,27 @@ export default function RoomPage() {
   const nextRoom = allRooms[(currentIndex + 1) % allRooms.length];
   const prevRoom = allRooms[(currentIndex - 1 + allRooms.length) % allRooms.length];
 
+  // Helper to format time
+  const formatTime = (time: string) => {
+    if (!time) return "";
+    const [hours, minutes] = time.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${minutes} ${ampm}`;
+  };
+
   return (
     <main className="min-h-screen bg-cream text-stone-dark">
 
       {/* MODAL COMPONENT */}
       <AvailabilityModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        roomName={room.name}
+        onClose={() => { setIsModalOpen(false); setSelectedUnit(null); }}
+        roomName={selectedUnit ? units.find(u => u._id === selectedUnit)?.name || room.name : room.name}
         roomSlug={room.slug}
         pricePerNight={room.price}
+        unitId={selectedUnit || undefined} // Pass unit ID if selected
       />
 
       {/* HERO SECTION */}
@@ -163,6 +193,30 @@ export default function RoomPage() {
               {room.description}
             </p>
 
+            {/* House Rules / Timings */}
+            {settings && (
+              <div className="flex gap-8 mb-8 pb-8 border-b border-stone-200/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-stone-100 rounded-full text-stone-500">
+                    <Clock size={18} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Check-in</p>
+                    <p className="font-serif font-bold text-stone-900">{formatTime(settings.checkInTime)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-stone-100 rounded-full text-stone-500">
+                    <Clock size={18} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Check-out</p>
+                    <p className="font-serif font-bold text-stone-900">{formatTime(settings.checkOutTime)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <h3 className="font-serif font-bold text-xl mb-6">Room Features</h3>
             <ul className="grid grid-cols-2 gap-y-4 gap-x-8">
               {room.amenities.map((item, index) => (
@@ -179,13 +233,32 @@ export default function RoomPage() {
               <h3 className="font-serif font-bold text-xl mb-4">Reserve Your Stay</h3>
               <p className="text-sm text-stone-500 mb-6">Best rates guaranteed when booking directly.</p>
 
-              {/* BUTTON OPENS MODAL */}
+              {/* General Availability */}
               <button
-                onClick={() => setIsModalOpen(true)}
-                className="w-full bg-stone-900 text-white py-4 text-xs font-bold tracking-widest uppercase hover:bg-saffron hover:text-stone-900 transition-colors"
+                onClick={() => { setSelectedUnit(null); setIsModalOpen(true); }}
+                className="w-full bg-stone-900 text-white py-4 text-xs font-bold tracking-widest uppercase hover:bg-saffron hover:text-stone-900 transition-colors mb-6"
               >
-                Check Availability
+                Check General Availability
               </button>
+
+              {/* Specific Units List */}
+              {units.length > 0 && (
+                <div className="border-t border-stone-200 pt-6">
+                  <p className="text-xs font-bold uppercase tracking-widest text-stone-400 mb-3">Select Specific Unit</p>
+                  <div className="space-y-2">
+                    {units.map(unit => (
+                      <button
+                        key={unit._id}
+                        onClick={() => { setSelectedUnit(unit._id); setIsModalOpen(true); }}
+                        className="w-full flex items-center justify-between p-3 bg-white border border-stone-200 hover:border-saffron hover:bg-stone-50 transition-all rounded-sm text-left group"
+                      >
+                        <span className="text-sm font-medium text-stone-700 group-hover:text-stone-900">{unit.name}</span>
+                        <span className="text-[10px] text-saffron opacity-0 group-hover:opacity-100 transition-opacity uppercase font-bold tracking-wider">Book</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
