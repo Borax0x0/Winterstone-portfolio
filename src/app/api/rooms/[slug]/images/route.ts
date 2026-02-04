@@ -2,9 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import dbConnect from '@/lib/db';
 import Room from '@/models/Room';
-import { writeFile, unlink, mkdir } from 'fs/promises';
-import path from 'path';
-import { existsSync } from 'fs';
+import { uploadToS3, deleteFromS3 } from '@/lib/s3';
 
 interface SessionUser {
     email?: string | null;
@@ -60,25 +58,9 @@ export async function POST(
             );
         }
 
-        // Create rooms directory if it doesn't exist
-        const uploadDir = path.join(process.cwd(), 'public', 'rooms', slug);
-        if (!existsSync(uploadDir)) {
-            await mkdir(uploadDir, { recursive: true });
-        }
-
-        // Generate unique filename
-        const ext = file.name.split('.').pop();
-        const timestamp = Date.now();
-        const filename = `${imageType === 'hero' ? 'hero' : `gallery-${timestamp}`}.${ext}`;
-        const filepath = path.join(uploadDir, filename);
-
-        // Write file
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        await writeFile(filepath, buffer);
-
-        // Build the public URL
-        const imageUrl = `/rooms/${slug}/${filename}`;
+        // Upload to S3
+        const folder = `rooms/${slug}`;
+        const imageUrl = await uploadToS3(file, folder);
 
         // Update room in database
         if (imageType === 'hero') {
@@ -140,15 +122,8 @@ export async function DELETE(
         room.gallery = room.gallery.filter((img: string) => img !== imageUrl);
         await room.save();
 
-        // Try to delete the actual file (best effort, don't fail if it doesn't exist)
-        try {
-            const filepath = path.join(process.cwd(), 'public', imageUrl);
-            if (existsSync(filepath)) {
-                await unlink(filepath);
-            }
-        } catch (fileError) {
-            console.warn('Could not delete file:', fileError);
-        }
+        // Delete from S3
+        await deleteFromS3(imageUrl);
 
         return NextResponse.json({
             message: 'Image removed successfully',

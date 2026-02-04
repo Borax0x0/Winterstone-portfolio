@@ -8,6 +8,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, X, Clock } from "lucide-react";
 import AvailabilityModal from "@/components/AvailabilityModal";
 import ReviewForm from "@/components/ReviewForm";
 import ReviewsList from "@/components/ReviewsList";
+import HeroSlideshow from "@/components/HeroSlideshow";
 
 // Fallback data in case API is not populated yet
 const fallbackRoomsData = [
@@ -16,7 +17,7 @@ const fallbackRoomsData = [
     name: "Skyline Haven",
     price: 8500,
     heroImage: "/skyline-main.jpg",
-    gallery: ["/skyline-1.jpg", "/skyline-2.jpg", "/bath-1.jpg"],
+    gallery: ["/skyline-hero-1.jpg", "/skyline-hero-2.jpg", "/skyline-1.jpg", "/skyline-2.jpg", "/bath-1.jpg"],
     description: "Perched high above the valley, the Skyline Haven is designed for the observer. Step out onto your private balcony to witness the mist rolling over the Himalayas. The interior blends warm wood tones with modern luxury.",
     amenities: ["Private Mountain Balcony", "Valley View", "King Size Bed", "Heated Floors", "Work Desk", "High-Speed Wi-Fi"],
   },
@@ -25,7 +26,7 @@ const fallbackRoomsData = [
     name: "Zen Nest",
     price: 6500,
     heroImage: "/zen-main.jpg",
-    gallery: ["/zen-1.jpg", "/zen-2.jpg", "/bath-2.jpg"],
+    gallery: ["/zen-hero-1.jpg", "/zen-hero-2.jpg", "/zen-1.jpg", "/zen-2.jpg", "/bath-2.jpg"],
     description: "A sanctuary dedicated to mindfulness. The Zen Nest features designated space for yoga, meditation, and stillness. Minimalist decor and soft ambient lighting allow you to disconnect from the noise and reconnect with yourself.",
     amenities: ["Yoga & Meditation Space", "Soundproofing", "Meditation Cushions", "Herbal Tea Station", "Dimmable Lighting", "Queen Bed"],
   },
@@ -34,7 +35,7 @@ const fallbackRoomsData = [
     name: "Sunlit Studio",
     price: 7200,
     heroImage: "/sunlit-main.jpg",
-    gallery: ["/sunlit-1.jpg", "/sunlit-2.jpg", "/bath-1.jpg"],
+    gallery: ["/sunlit-hero-1.jpg", "/sunlit-hero-2.jpg", "/sunlit-1.jpg", "/sunlit-2.jpg", "/bath-1.jpg"],
     description: "Bathed in natural light, the Sunlit Studio blurs the line between indoors and out. Located on the ground floor for easy access, the massive front-facing windows frame the pine forest, bringing the golden hour directly to your bedside.",
     amenities: ["Floor-to-Ceiling Windows", "Ground Floor Access", "Sitting Area", "Natural Light", "Rain Shower", "Smart TV"],
   },
@@ -75,7 +76,7 @@ export default function RoomPage() {
         ]);
 
         let roomsData: Room[] = [];
-        
+
         if (allRes.ok) {
           roomsData = await allRes.json();
         }
@@ -162,24 +163,13 @@ export default function RoomPage() {
         unitId={selectedUnit || undefined} // Pass unit ID if selected
       />
 
-      {/* HERO SECTION */}
-      <div className="relative h-screen w-full">
-        <Image 
-          src={room.heroImage} 
-          alt={room.name} 
-          fill 
-          priority
-          className="object-cover" 
-        />
-        <div className="absolute inset-0 bg-black/30" />
-
-        <div className="absolute bottom-12 left-6 md:left-12 text-white z-10">
-          <h1 className="text-4xl md:text-6xl font-serif font-bold mb-2">{room.name}</h1>
-          <p className="text-xl text-saffron font-light">
-            From ₹{room.price.toLocaleString()} <span className="text-sm text-white/80">/ night</span>
-          </p>
-        </div>
-      </div>
+      {/* HERO SLIDESHOW - Only use main hero + 2 hero images */}
+      <HeroSlideshow
+        images={[room.heroImage, ...room.gallery.slice(0, 2)]}
+        roomName={room.name}
+        price={room.price}
+        interval={5000}
+      />
 
       {/* DETAILS SECTION */}
       <div className="max-w-6xl mx-auto px-6 py-24">
@@ -273,44 +263,44 @@ export default function RoomPage() {
             {/* 3-Image Preview Layout */}
             <div className="grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr] gap-5 w-full">
               {room.gallery[0] && (
-                <div 
+                <div
                   className="relative h-[500px] md:h-[800px] w-full cursor-pointer group"
                   onClick={() => { setCurrentSlide(0); setIsGalleryOpen(true); }}
                 >
-                  <Image 
-                    src={room.gallery[0]} 
-                    alt="Feature View" 
+                  <Image
+                    src={room.gallery[0]}
+                    alt="Feature View"
                     fill
-                    className="object-cover block rounded-lg" 
+                    className="object-cover block rounded-lg"
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg" />
                 </div>
               )}
               <div className="flex flex-col gap-5 h-full">
                 {room.gallery[1] && (
-                  <div 
+                  <div
                     className="relative h-[240px] md:h-[390px] w-full cursor-pointer group"
                     onClick={() => { setCurrentSlide(1); setIsGalleryOpen(true); }}
                   >
-                    <Image 
-                      src={room.gallery[1]} 
-                      alt="Detail" 
+                    <Image
+                      src={room.gallery[1]}
+                      alt="Detail"
                       fill
-                      className="object-cover block rounded-lg" 
+                      className="object-cover block rounded-lg"
                     />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg" />
                   </div>
                 )}
                 {room.gallery[2] ? (
-                  <div 
+                  <div
                     className="relative h-[240px] md:h-[390px] w-full cursor-pointer group"
                     onClick={() => { setCurrentSlide(2); setIsGalleryOpen(true); }}
                   >
-                    <Image 
-                      src={room.gallery[2]} 
-                      alt="Bath Detail" 
+                    <Image
+                      src={room.gallery[2]}
+                      alt="Bath Detail"
                       fill
-                      className="object-cover block rounded-lg" 
+                      className="object-cover block rounded-lg"
                     />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg" />
                     {/* View More overlay if more than 3 images */}
@@ -386,17 +376,16 @@ export default function RoomPage() {
 
           {/* Thumbnail Strip */}
           <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 flex gap-2 max-w-[90vw] overflow-x-auto py-2 px-4">
-              {room.gallery.map((img, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentSlide(index)}
-                  className={`relative flex-shrink-0 w-16 h-12 md:w-20 md:h-14 rounded overflow-hidden border-2 transition-all ${
-                    currentSlide === index ? 'border-saffron' : 'border-transparent opacity-50 hover:opacity-100'
+            {room.gallery.map((img, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={`relative flex-shrink-0 w-16 h-12 md:w-20 md:h-14 rounded overflow-hidden border-2 transition-all ${currentSlide === index ? 'border-saffron' : 'border-transparent opacity-50 hover:opacity-100'
                   }`}
-                >
-                  <Image src={img} alt="" fill className="object-cover" />
-                </button>
-              ))}
+              >
+                <Image src={img} alt="" fill className="object-cover" />
+              </button>
+            ))}
           </div>
         </div>
       )}

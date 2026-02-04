@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { LayoutDashboard, BookKey, Users, Settings, LogOut, MessageSquare, ShieldCheck, X, ChevronRight, BedDouble, LucideIcon } from "lucide-react";
+import { LayoutDashboard, BookKey, Users, Settings, LogOut, MessageSquare, ShieldCheck, X, ChevronRight, BedDouble, LucideIcon, DoorOpen } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 

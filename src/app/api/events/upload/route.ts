@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
-import { existsSync } from 'fs';
+import { uploadToS3 } from '@/lib/s3';
 
 interface SessionUser {
     email?: string | null;
@@ -45,27 +43,8 @@ export async function POST(request: Request) {
             );
         }
 
-        // Create events directory if it doesn't exist
-        const uploadDir = path.join(process.cwd(), 'public', 'events');
-        if (!existsSync(uploadDir)) {
-            await mkdir(uploadDir, { recursive: true });
-        }
-
-        // Generate unique filename
-        const ext = file.name.split('.').pop();
-        const timestamp = Date.now();
-        // Sanitize filename to be safe
-        const safeName = file.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        const filename = `event-${timestamp}-${safeName}.${ext}`;
-        const filepath = path.join(uploadDir, filename);
-
-        // Write file
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        await writeFile(filepath, buffer);
-
-        // Return the public URL
-        const imageUrl = `/events/${filename}`;
+        // Upload to S3
+        const imageUrl = await uploadToS3(file, 'events');
 
         return NextResponse.json({
             message: 'Image uploaded successfully',
