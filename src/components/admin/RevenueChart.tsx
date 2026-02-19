@@ -37,14 +37,14 @@ export default function RevenueChart() {
                             </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#44403c" />
-                        <XAxis 
-                            dataKey="month" 
-                            stroke="#a8a29e" 
+                        <XAxis
+                            dataKey="month"
+                            stroke="#a8a29e"
                             fontSize={12}
                             tickLine={false}
                         />
-                        <YAxis 
-                            stroke="#a8a29e" 
+                        <YAxis
+                            stroke="#a8a29e"
                             fontSize={12}
                             tickLine={false}
                             tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
@@ -56,7 +56,7 @@ export default function RevenueChart() {
                                 borderRadius: '8px',
                             }}
                             labelStyle={{ color: '#a8a29e' }}
-                            formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Revenue']}
+                            formatter={(value: number | undefined) => [`₹${(value ?? 0).toLocaleString()}`, 'Revenue']}
                         />
                         <Area
                             type="monotone"

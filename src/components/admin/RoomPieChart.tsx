@@ -47,8 +47,8 @@ export default function RoomPieChart() {
                                 border: '1px solid #44403c',
                                 borderRadius: '8px',
                             }}
-                            formatter={(value: number) => [
-                                `₹${value.toLocaleString()} (${((value / total) * 100).toFixed(0)}%)`,
+                            formatter={(value: number | undefined) => [
+                                `₹${(value ?? 0).toLocaleString()} (${(((value ?? 0) / total) * 100).toFixed(0)}%)`,
                                 'Revenue'
                             ]}
                         />

@@ -49,7 +49,7 @@ export default function BookingsChart() {
                                 borderRadius: '8px',
                             }}
                             labelStyle={{ color: '#a8a29e' }}
-                            formatter={(value: number) => [value, 'Bookings']}
+                            formatter={(value: number | undefined) => [value ?? 0, 'Bookings']}
                         />
                         <Bar
                             dataKey="bookings"
