@@ -56,7 +56,7 @@ export default function RoomPage() {
   const params = useParams();
   const [room, setRoom] = useState<Room | null>(null);
   const [allRooms, setAllRooms] = useState<Room[]>([]);
-  const [units, setUnits] = useState<{ _id: string; name: string; isActive: boolean }[]>([]); // Added units state
+  const [units, setUnits] = useState<{ _id: string; name: string; isActive: boolean; image: string; shortDescription: string; features: string[] }[]>([]);
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null); // Track selected unit for modal
 
   const [isLoading, setIsLoading] = useState(true);
@@ -226,33 +226,79 @@ export default function RoomPage() {
               {/* General Availability */}
               <button
                 onClick={() => { setSelectedUnit(null); setIsModalOpen(true); }}
-                className="w-full bg-stone-900 text-white py-4 text-xs font-bold tracking-widest uppercase hover:bg-saffron hover:text-stone-900 transition-colors mb-6"
+                className="w-full bg-stone-900 text-white py-4 text-xs font-bold tracking-widest uppercase hover:bg-saffron hover:text-stone-900 transition-colors"
               >
-                Check General Availability
+                Check Availability
               </button>
-
-              {/* Specific Units List */}
-              {units.length > 0 && (
-                <div className="border-t border-stone-200 pt-6">
-                  <p className="text-xs font-bold uppercase tracking-widest text-stone-400 mb-3">Select Specific Unit</p>
-                  <div className="space-y-2">
-                    {units.map(unit => (
-                      <button
-                        key={unit._id}
-                        onClick={() => { setSelectedUnit(unit._id); setIsModalOpen(true); }}
-                        className="w-full flex items-center justify-between p-3 bg-white border border-stone-200 hover:border-saffron hover:bg-stone-50 transition-all rounded-sm text-left group"
-                      >
-                        <span className="text-sm font-medium text-stone-700 group-hover:text-stone-900">{unit.name}</span>
-                        <span className="text-[10px] text-saffron opacity-0 group-hover:opacity-100 transition-opacity uppercase font-bold tracking-wider">Book</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* SUBTYPE CARDS SECTION */}
+      {units.filter(u => u.isActive !== false).length > 0 && (
+        <div className="w-full bg-stone-50 py-24 border-t border-stone-200">
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="mb-12">
+              <p className="text-xs font-bold uppercase tracking-widest text-saffron mb-2">Choose Your Room</p>
+              <h2 className="font-serif font-bold text-3xl text-stone-900">Select Your Preferred Space</h2>
+              <p className="text-stone-500 mt-2 text-sm">Each room has its own character. Pick one that speaks to you.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {units.filter(u => u.isActive !== false).map(unit => (
+                <div
+                  key={unit._id}
+                  className="group bg-white rounded-lg overflow-hidden border border-stone-200 hover:border-saffron hover:shadow-lg transition-all duration-300 cursor-pointer"
+                  onClick={() => { setSelectedUnit(unit._id); setIsModalOpen(true); }}
+                >
+                  {/* Card Image */}
+                  <div className="relative h-52 bg-stone-200 overflow-hidden">
+                    {unit.image ? (
+                      <Image
+                        src={unit.image}
+                        alt={unit.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-stone-300 to-stone-400 flex items-center justify-center">
+                        <span className="text-white/50 text-4xl font-serif">{unit.name[0]}</span>
+                      </div>
+                    )}
+                    {/* Overlay on hover */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
+                    <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <span className="bg-saffron text-stone-900 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full">
+                        Book →
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card Content */}
+                  <div className="p-5">
+                    <h3 className="font-serif font-bold text-lg text-stone-900 mb-1 group-hover:text-saffron transition-colors">
+                      {unit.name}
+                    </h3>
+                    {unit.shortDescription && (
+                      <p className="text-sm text-stone-500 mb-3 leading-relaxed">{unit.shortDescription}</p>
+                    )}
+                    {unit.features && unit.features.length > 0 && (
+                      <ul className="space-y-1">
+                        {unit.features.slice(0, 3).map((f, i) => (
+                          <li key={i} className="flex items-center gap-2 text-xs text-stone-600">
+                            <div className="w-1 h-1 bg-saffron rounded-full flex-shrink-0" />
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* GALLERY PREVIEW + MODAL */}
       {room.gallery && room.gallery.length > 0 && (

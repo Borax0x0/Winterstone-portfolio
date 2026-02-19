@@ -44,6 +44,36 @@ export async function POST(request: Request) {
     }
 }
 
+// PUT update unit
+export async function PUT(request: Request) {
+    try {
+        const session = await auth();
+        const userRole = (session?.user as SessionUser | undefined)?.role;
+        if (!session?.user || !userRole || !['admin', 'superadmin'].includes(userRole)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+        if (!id) {
+            return NextResponse.json({ error: 'Unit ID required' }, { status: 400 });
+        }
+
+        await dbConnect();
+        const body = await request.json();
+
+        const unit = await RoomUnit.findByIdAndUpdate(id, body, { new: true });
+        if (!unit) {
+            return NextResponse.json({ error: 'Unit not found' }, { status: 404 });
+        }
+
+        return NextResponse.json(unit);
+    } catch (error) {
+        console.error('Failed to update unit:', error);
+        return NextResponse.json({ error: 'Failed to update unit' }, { status: 500 });
+    }
+}
+
 // DELETE unit
 export async function DELETE(request: Request) {
     try {

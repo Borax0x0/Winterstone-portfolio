@@ -22,6 +22,8 @@ interface RoomUnit {
     _id: string;
     name: string;
     roomTypeSlug: string;
+    image: string;
+    shortDescription: string;
     isActive: boolean;
 }
 
@@ -29,17 +31,19 @@ export default function RoomsPage() {
     const [rooms, setRooms] = useState<Room[]>([]);
     const [units, setUnits] = useState<RoomUnit[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    
+
     // Room Modal State
     const [editingRoom, setEditingRoom] = useState<Room | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isNewRoom, setIsNewRoom] = useState(false);
-    
+
     // Inventory Modal State
     const [isInventoryOpen, setIsInventoryOpen] = useState(false);
     const [selectedRoomForInventory, setSelectedRoomForInventory] = useState<Room | null>(null);
     const [newUnitName, setNewUnitName] = useState("");
     const [isAddingUnit, setIsAddingUnit] = useState(false);
+    const [editingUnit, setEditingUnit] = useState<RoomUnit | null>(null);
+    const [editUnitData, setEditUnitData] = useState({ name: '', shortDescription: '', image: '', isActive: true });
 
     const [uploadingImage, setUploadingImage] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -65,7 +69,7 @@ export default function RoomsPage() {
                 fetch('/api/rooms'),
                 fetch('/api/rooms/units')
             ]);
-            
+
             if (roomsRes.ok) {
                 const data = await roomsRes.json();
                 setRooms(data);
@@ -195,13 +199,13 @@ export default function RoomsPage() {
             }
 
             const data = await res.json();
-            
+
             if (uploadType === 'hero') {
                 setFormData(prev => ({ ...prev, heroImage: data.imageUrl }));
             } else {
                 setFormData(prev => ({ ...prev, gallery: [...prev.gallery, data.imageUrl] }));
             }
-            
+
             toast.success('Image uploaded successfully');
             fetchData();
         } catch (error: unknown) {
@@ -283,7 +287,7 @@ export default function RoomsPage() {
             });
 
             if (!res.ok) throw new Error('Failed to add unit');
-            
+
             toast.success('Unit added');
             setNewUnitName("");
             fetchData(); // Refresh list to see new unit
@@ -296,13 +300,30 @@ export default function RoomsPage() {
 
     // Delete Unit
     const handleDeleteUnit = async (id: string) => {
-        if (!confirm("Delete this physical room?")) return;
+        if (!confirm("Delete this room?")) return;
         try {
             await fetch(`/api/rooms/units?id=${id}`, { method: 'DELETE' });
-            toast.success('Unit deleted');
+            toast.success('Room deleted');
             setUnits(prev => prev.filter(u => u._id !== id));
         } catch (error) {
-            toast.error("Failed to delete unit");
+            toast.error("Failed to delete room");
+        }
+    };
+
+    // Update Unit
+    const handleUpdateUnit = async (id: string, data: Partial<RoomUnit>) => {
+        try {
+            const res = await fetch(`/api/rooms/units?id=${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+            if (!res.ok) throw new Error('Failed to update');
+            toast.success('Room updated');
+            setEditingUnit(null);
+            fetchData();
+        } catch {
+            toast.error('Failed to update room');
         }
     };
 
@@ -376,10 +397,10 @@ export default function RoomsPage() {
                                         <button
                                             onClick={() => handleOpenInventory(room)}
                                             className="flex items-center gap-1 px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded text-xs font-bold uppercase tracking-wider transition-colors"
-                                            title="Manage Inventory"
+                                            title="Manage Rooms"
                                         >
                                             <DoorOpen size={14} />
-                                            {units.filter(u => u.roomTypeSlug === room.slug).length} Units
+                                            {units.filter(u => u.roomTypeSlug === room.slug).length} Rooms
                                         </button>
                                     </div>
                                     <div className="flex gap-2">
@@ -650,18 +671,18 @@ export default function RoomsPage() {
                     </div>
                 </div>
             )}
-            {/* INVENTORY MODAL */}
+            {/* ROOMS MANAGEMENT MODAL */}
             {isInventoryOpen && selectedRoomForInventory && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+                    <div className="bg-white rounded-xl w-full max-w-lg overflow-hidden shadow-2xl">
                         {/* Header */}
                         <div className="bg-stone-50 p-6 border-b border-stone-200 flex justify-between items-center">
                             <div>
-                                <h3 className="font-bold text-lg text-stone-900">Manage Inventory</h3>
+                                <h3 className="font-bold text-lg text-stone-900">Manage Rooms</h3>
                                 <p className="text-stone-500 text-sm">{selectedRoomForInventory.name}</p>
                             </div>
                             <button
-                                onClick={() => setIsInventoryOpen(false)}
+                                onClick={() => { setIsInventoryOpen(false); setEditingUnit(null); }}
                                 className="p-2 hover:bg-stone-200 rounded-full transition-colors"
                             >
                                 <X size={20} className="text-stone-500" />
@@ -670,13 +691,13 @@ export default function RoomsPage() {
 
                         {/* Body */}
                         <div className="p-6">
-                            {/* Add Form */}
+                            {/* Add New Room */}
                             <form onSubmit={handleAddUnit} className="flex gap-2 mb-6">
                                 <input
                                     type="text"
                                     value={newUnitName}
                                     onChange={(e) => setNewUnitName(e.target.value)}
-                                    placeholder="Unit Name (e.g. 101)"
+                                    placeholder="Room Name (e.g. Skyline 101)"
                                     className="flex-1 px-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-saffron"
                                 />
                                 <button
@@ -688,30 +709,105 @@ export default function RoomsPage() {
                                 </button>
                             </form>
 
-                            {/* List */}
-                            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                            {/* Rooms List */}
+                            <div className="space-y-3 max-h-[400px] overflow-y-auto">
                                 {units.filter(u => u.roomTypeSlug === selectedRoomForInventory.slug).length > 0 ? (
                                     units
                                         .filter(u => u.roomTypeSlug === selectedRoomForInventory.slug)
                                         .map(unit => (
-                                            <div key={unit._id} className="flex justify-between items-center p-3 bg-stone-50 border border-stone-100 rounded-lg group">
-                                                <div className="flex items-center gap-3">
-                                                    <Home size={16} className="text-stone-400" />
-                                                    <span className="font-medium text-stone-700">{unit.name}</span>
-                                                </div>
-                                                <button
-                                                    onClick={() => handleDeleteUnit(unit._id)}
-                                                    className="text-stone-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                            <div key={unit._id} className="bg-stone-50 border border-stone-100 rounded-lg overflow-hidden">
+                                                {editingUnit?._id === unit._id ? (
+                                                    /* Edit Mode */
+                                                    <div className="p-4 space-y-3">
+                                                        <input
+                                                            type="text"
+                                                            value={editUnitData.name}
+                                                            onChange={(e) => setEditUnitData(prev => ({ ...prev, name: e.target.value }))}
+                                                            className="w-full px-3 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-saffron text-sm"
+                                                            placeholder="Room name (e.g. Skyline 101)"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={editUnitData.shortDescription}
+                                                            onChange={(e) => setEditUnitData(prev => ({ ...prev, shortDescription: e.target.value }))}
+                                                            className="w-full px-3 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-saffron text-sm"
+                                                            placeholder="Short tagline (e.g. Valley views with morning mist)"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={editUnitData.image}
+                                                            onChange={(e) => setEditUnitData(prev => ({ ...prev, image: e.target.value }))}
+                                                            className="w-full px-3 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-saffron text-sm"
+                                                            placeholder="Image path (e.g. /skyline-room-1.jpg)"
+                                                        />
+                                                        <div className="flex items-center justify-between">
+                                                            <label className="flex items-center gap-2 cursor-pointer text-sm">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={editUnitData.isActive}
+                                                                    onChange={(e) => setEditUnitData(prev => ({ ...prev, isActive: e.target.checked }))}
+                                                                    className="w-4 h-4 accent-saffron"
+                                                                />
+                                                                <span className="text-stone-600">Active</span>
+                                                            </label>
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    onClick={() => setEditingUnit(null)}
+                                                                    className="px-3 py-1.5 text-xs text-stone-500 hover:bg-stone-200 rounded-lg transition-colors"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleUpdateUnit(unit._id, editUnitData)}
+                                                                    className="px-3 py-1.5 text-xs bg-saffron text-stone-900 font-bold rounded-lg hover:bg-saffron/90 transition-colors"
+                                                                >
+                                                                    Save
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    /* View Mode */
+                                                    <div className="flex justify-between items-center p-3 group">
+                                                        <div className="flex items-center gap-3">
+                                                            <Home size={16} className={unit.isActive ? 'text-saffron' : 'text-stone-300'} />
+                                                            <div>
+                                                                <span className={`font-medium ${unit.isActive ? 'text-stone-700' : 'text-stone-400 line-through'}`}>
+                                                                    {unit.name}
+                                                                </span>
+                                                                {!unit.isActive && (
+                                                                    <span className="ml-2 text-[10px] uppercase tracking-wider text-red-400 font-bold">Inactive</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingUnit(unit);
+                                                                    setEditUnitData({ name: unit.name, shortDescription: unit.shortDescription || '', image: unit.image || '', isActive: unit.isActive });
+                                                                }}
+                                                                className="p-1.5 text-stone-400 hover:text-saffron hover:bg-stone-200 rounded transition-colors"
+                                                                title="Edit"
+                                                            >
+                                                                <Pencil size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteUnit(unit._id)}
+                                                                className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                                                title="Delete"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         ))
                                 ) : (
                                     <div className="text-center py-8 text-stone-400 text-sm border-2 border-dashed border-stone-100 rounded-lg">
-                                        No physical rooms added yet.
+                                        No rooms added yet.
                                         <br />
-                                        Availability defaults to 1.
+                                        Add rooms to let guests pick specific ones.
                                     </div>
                                 )}
                             </div>
