@@ -11,13 +11,15 @@ interface InvoiceModalProps {
         id: string;
         roomName: string;
         guestName: string;
-        email: string; // Added email for display
+        email: string;
         checkIn: string;
         checkOut: string;
         nights: number;
         basePrice: number;
+        addOnsTotal: number;
         taxes: number;
         grandTotal: number;
+        addOns: { addOnId: string; name: string; price: number }[];
     } | null;
 }
 
@@ -70,12 +72,28 @@ export default function InvoiceModal({ isOpen, bookingDetails }: InvoiceModalPro
                             </div>
                         </div>
 
-                        {/* Financials */}
+{/* Financials */}
                         <div className="bg-white p-4 rounded border border-stone-200 space-y-2 mb-8">
                             <div className="flex justify-between text-xs text-stone-500">
                                 <span>Rate ({bookingDetails.nights} nights)</span>
                                 <span>₹{bookingDetails.basePrice.toLocaleString()}</span>
                             </div>
+                            {bookingDetails.addOnsTotal > 0 && bookingDetails.addOns.length > 0 && (
+                                <>
+                                    <div className="flex justify-between text-xs text-stone-500">
+                                        <span>Add-ons</span>
+                                        <span>₹{bookingDetails.addOnsTotal.toLocaleString()}</span>
+                                    </div>
+                                    <div className="pl-2 space-y-1 border-l-2 border-stone-200 ml-1">
+                                        {bookingDetails.addOns.map((addon, i) => (
+                                            <div key={i} className="flex justify-between text-[10px] text-stone-400">
+                                                <span>{addon.name}</span>
+                                                <span>₹{addon.price.toLocaleString()}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
                             <div className="flex justify-between text-xs text-stone-500">
                                 <span>Taxes & Fees (12%)</span>
                                 <span>₹{bookingDetails.taxes.toLocaleString()}</span>

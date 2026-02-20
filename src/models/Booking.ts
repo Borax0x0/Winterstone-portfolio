@@ -2,6 +2,12 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export type BookingStatus = "Confirmed" | "Pending" | "Cancelled";
 
+export interface IBookingAddOn {
+    addOnId: string;
+    name: string;
+    price: number;
+}
+
 export interface IBooking extends Document {
     guestName: string;
     email: string;
@@ -9,12 +15,14 @@ export interface IBooking extends Document {
     checkIn: string;
     checkOut: string;
     totalAmount: number;
+    addOns: IBookingAddOn[];
+    addOnsTotal: number;
     status: BookingStatus;
     paymentStatus: "Pending" | "Paid" | "Failed";
     razorpayOrderId?: string;
     razorpayPaymentId?: string;
-    specialRequests?: string[]; // Added
-    assignedUnit?: string; // ID of the specific RoomUnit
+    specialRequests?: string[];
+    assignedUnit?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -27,6 +35,12 @@ const BookingSchema: Schema<IBooking> = new Schema(
         checkIn: { type: String, required: true },
         checkOut: { type: String, required: true },
         totalAmount: { type: Number, required: true },
+        addOns: [{
+            addOnId: { type: String, required: true },
+            name: { type: String, required: true },
+            price: { type: Number, required: true }
+        }],
+        addOnsTotal: { type: Number, default: 0 },
         status: {
             type: String,
             enum: ["Confirmed", "Pending", "Cancelled"],
@@ -39,7 +53,7 @@ const BookingSchema: Schema<IBooking> = new Schema(
         },
         razorpayOrderId: { type: String },
         razorpayPaymentId: { type: String },
-        specialRequests: { type: [String], default: [] }, // Added
+        specialRequests: { type: [String], default: [] },
         assignedUnit: { type: String },
     },
     {

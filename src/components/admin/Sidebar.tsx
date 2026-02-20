@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { LayoutDashboard, BookKey, Users, Settings, LogOut, MessageSquare, ShieldCheck, X, ChevronRight, BedDouble, LucideIcon, DoorOpen } from "lucide-react";
+import { LayoutDashboard, BookKey, Users, Settings, LogOut, MessageSquare, ShieldCheck, X, ChevronRight, BedDouble, LucideIcon, DoorOpen, Sparkles } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -10,6 +10,7 @@ const navItems = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Bookings", href: "/admin/bookings", icon: BookKey },
     { name: "Rooms", href: "/admin/rooms", icon: BedDouble },
+    { name: "Add-Ons", href: "/admin/addons", icon: Sparkles },
     { name: "Reviews", href: "/admin/reviews", icon: MessageSquare },
     { name: "Team", href: "/admin/team", icon: Users },
     { name: "Guests", href: "/admin/guests", icon: Users },

@@ -4,17 +4,25 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 
 export type BookingStatus = "Confirmed" | "Pending" | "Cancelled";
 
+export interface BookingAddOn {
+    addOnId: string;
+    name: string;
+    price: number;
+}
+
 export interface Booking {
-    _id: string; // MongoDB
-    id?: string; // Fallback
+    _id: string;
+    id?: string;
     guestName: string;
     email: string;
     roomName: string;
     checkIn: string;
     checkOut: string;
     totalAmount: number;
+    addOns?: BookingAddOn[];
+    addOnsTotal?: number;
     status: BookingStatus;
-    specialRequests?: string[]; // Added
+    specialRequests?: string[];
 }
 
 interface PaymentOrder {

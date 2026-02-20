@@ -126,7 +126,22 @@ export async function sendBookingConfirmationEmail(params: {
     base_price: string;
     taxes: string;
     total_price: string;
+    add_ons?: { addOnId: string; name: string; price: number }[];
+    add_ons_total?: string;
 }): Promise<boolean> {
+    const addOnsHtml = params.add_ons && params.add_ons.length > 0 ? `
+        <tr>
+            <td><p style="margin:6px 0 0;color:#57534e;font-size:12px;">Add-ons</p></td>
+            <td style="text-align:right;"><p style="margin:6px 0 0;color:#1c1917;font-size:12px;">${params.add_ons_total || '₹0'}</p></td>
+        </tr>
+        ${params.add_ons.map(addon => `
+            <tr>
+                <td style="padding-left:12px;"><p style="margin:4px 0 0;color:#a8a29e;font-size:11px;">• ${addon.name}</p></td>
+                <td style="text-align:right;"><p style="margin:4px 0 0;color:#a8a29e;font-size:11px;">₹${addon.price.toLocaleString()}</p></td>
+            </tr>
+        `).join('')}
+    ` : '';
+
     const html = `
     <!DOCTYPE html>
     <html>
@@ -189,13 +204,14 @@ export async function sendBookingConfirmationEmail(params: {
                                     </td>
                                 </tr>
                                 <tr><td style="padding:12px 16px 0;"><div style="height:1px;background:#e7e5e4;"></div></td></tr>
-                                <tr>
+<tr>
                                     <td style="padding:12px 16px;">
                                         <table width="100%">
                                             <tr>
                                                 <td><p style="margin:0;color:#57534e;font-size:12px;">${params.nights} nights</p></td>
                                                 <td style="text-align:right;"><p style="margin:0;color:#1c1917;font-size:12px;">${params.base_price}</p></td>
                                             </tr>
+                                            ${addOnsHtml}
                                             <tr>
                                                 <td><p style="margin:6px 0 0;color:#57534e;font-size:12px;">Taxes & Fees (12%)</p></td>
                                                 <td style="text-align:right;"><p style="margin:6px 0 0;color:#1c1917;font-size:12px;">${params.taxes}</p></td>

@@ -6,7 +6,7 @@ import Link from "next/link";
 import Script from "next/script";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { ArrowLeft, Calendar, User, Check, Phone, Mail, Loader2, CreditCard, Clock, MessageSquare } from "lucide-react";
+import { ArrowLeft, Calendar, User, Check, Phone, Mail, Loader2, CreditCard, MessageSquare, Sparkles } from "lucide-react";
 // Email sent via API route (server-side)
 // PaymentModal removed - logic is handled inline
 import InvoiceModal from "@/components/InvoiceModal";
@@ -49,8 +49,18 @@ interface InvoiceData {
   checkOut: string;
   nights: number;
   basePrice: number;
+  addOnsTotal: number;
   taxes: number;
   grandTotal: number;
+  addOns: { addOnId: string; name: string; price: number }[];
+}
+
+interface AddOn {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  isActive: boolean;
 }
 
 function BookingContent() {
@@ -68,9 +78,13 @@ function BookingContent() {
   const [assignedUnit, setAssignedUnit] = useState("");
   const [isCheckingUnits, setIsCheckingUnits] = useState(false);
 
-  const [name, setName] = useState("");
+const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+
+  // ADD-ONS STATE
+  const [availableAddOns, setAvailableAddOns] = useState<AddOn[]>([]);
+  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]); // IDs of selected add-ons
 
   // PAYMENT & SENDING STATES
   const [isProcessing, setIsProcessing] = useState(false);
@@ -93,7 +107,7 @@ function BookingContent() {
     specialRequestOptions: [] as string[],
   });
 
-  // FETCH SETTINGS
+// FETCH SETTINGS
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -111,6 +125,22 @@ function BookingContent() {
       }
     };
     fetchSettings();
+  }, []);
+
+  // FETCH ADD-ONS
+  useEffect(() => {
+    const fetchAddOns = async () => {
+      try {
+        const res = await fetch('/api/addons');
+        if (res.ok) {
+          const data = await res.json();
+          setAvailableAddOns(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch add-ons:", error);
+      }
+    };
+    fetchAddOns();
   }, []);
 
   // LOAD URL PARAMS (room, checkin, checkout from AvailabilityModal)
@@ -220,7 +250,7 @@ function BookingContent() {
   const selectedRoom = ROOMS.find((r) => r.id === selectedRoomId) || ROOMS[0];
 
 
-  const calculateTotal = () => {
+const calculateTotal = () => {
     if (!checkIn || !checkOut) return 0;
     const start = new Date(checkIn);
     const end = new Date(checkOut);
@@ -229,10 +259,29 @@ function BookingContent() {
     return diffDays > 0 ? diffDays * selectedRoom.price : 0;
   };
 
+  const calculateAddOnsTotal = () => {
+    return selectedAddOns.reduce((sum, addOnId) => {
+      const addOn = availableAddOns.find(a => a._id === addOnId);
+      return sum + (addOn?.price || 0);
+    }, 0);
+  };
+
+  const getSelectedAddOnsData = () => {
+    return selectedAddOns.map(addOnId => {
+      const addOn = availableAddOns.find(a => a._id === addOnId);
+      return {
+        addOnId,
+        name: addOn?.name || "",
+        price: addOn?.price || 0
+      };
+    }).filter(a => a.name);
+  };
+
   const total = calculateTotal();
-  const basePrice = total; // Calculated based on room price * nights
-  const taxes = Math.round(basePrice * 0.12); // 12% TAX
-  const grandTotal = basePrice + taxes;
+  const basePrice = total;
+  const addOnsTotal = calculateAddOnsTotal();
+  const taxes = Math.round((basePrice + addOnsTotal) * 0.12);
+  const grandTotal = basePrice + addOnsTotal + taxes;
   const nights = total / selectedRoom.price || 0;
 
   // VALIDATION
@@ -353,16 +402,18 @@ function BookingContent() {
         finalRequests.push(`Other: ${customRequest.trim()}`);
       }
 
-      const newBooking = {
-        guestName: name, // Note: Model uses guestName, Check interface
+const newBooking = {
+        guestName: name,
         email,
         roomName: selectedRoom.name,
         checkIn,
         checkOut,
         totalAmount: grandTotal,
-        status: "Pending" as const, // Type cast
-        specialRequests: finalRequests, // Added
-        assignedUnit: assignedUnit || undefined, // Pass specific unit if selected
+        addOns: getSelectedAddOnsData(),
+        addOnsTotal: addOnsTotal,
+        status: "Pending" as const,
+        specialRequests: finalRequests,
+        assignedUnit: assignedUnit || undefined,
       };
 
       // Use Context to Add (This generates a POST to /api/bookings)
@@ -402,8 +453,9 @@ function BookingContent() {
   };
 
 
-  // --- STEP 3: SEND EMAIL ---
+// --- STEP 3: SEND EMAIL ---
   const finalizeEmail = async (bookingId: string) => {
+    const selectedAddOnsList = getSelectedAddOnsData();
     const templateParams = {
       room_name: selectedRoom.name,
       user_name: name,
@@ -414,7 +466,9 @@ function BookingContent() {
       check_out: checkOut,
       nights: nights,
       total_price: `₹${grandTotal.toLocaleString()}`,
-      booking_id: bookingId
+      booking_id: bookingId,
+      add_ons: selectedAddOnsList,
+      add_ons_total: `₹${addOnsTotal.toLocaleString()}`,
     };
 
     try {
@@ -431,7 +485,7 @@ function BookingContent() {
       setIsProcessing(false);
       setIsSuccess(true);
 
-      setInvoiceData({
+setInvoiceData({
         id: bookingId,
         roomName: selectedRoom.name,
         guestName: name,
@@ -440,8 +494,10 @@ function BookingContent() {
         checkOut: checkOut,
         nights: nights,
         basePrice: basePrice,
+        addOnsTotal: addOnsTotal,
         taxes: taxes,
         grandTotal: grandTotal,
+        addOns: getSelectedAddOnsData(),
       });
 
       setIsInvoiceOpen(true);
@@ -453,7 +509,20 @@ function BookingContent() {
       // Still show success UI because payment worked
       alert("Booking confirmed! (Email delivery pending)");
       // Show invoice anyway
-      setInvoiceData({ id: bookingId, roomName: selectedRoom.name, guestName: name, email, checkIn, checkOut, nights, basePrice, taxes, grandTotal });
+      setInvoiceData({ 
+        id: bookingId, 
+        roomName: selectedRoom.name, 
+        guestName: name, 
+        email, 
+        checkIn, 
+        checkOut, 
+        nights, 
+        basePrice, 
+        addOnsTotal,
+        taxes, 
+        grandTotal,
+        addOns: getSelectedAddOnsData()
+      });
       setIsInvoiceOpen(true);
     }
   };
@@ -676,11 +745,54 @@ function BookingContent() {
                     <div className="p-4 bg-stone-50 border border-stone-100 text-stone-500 text-sm italic">
                       {isCheckingUnits ? "Loading rooms..." : "System will assign the best available room automatically."}
                     </div>
-                  )}
+)}
                 </div>
               )}
 
-              {/* 3. PERSONAL DETAILS */}
+              {/* 3. ENHANCE YOUR STAY (ADD-ONS) */}
+              {isDateValid && availableAddOns.length > 0 && (
+                <div>
+                  <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-saffron" />
+                    Enhance Your Stay
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {availableAddOns.map((addon) => (
+                      <button
+                        key={addon._id}
+                        onClick={() => {
+                          if (selectedAddOns.includes(addon._id)) {
+                            setSelectedAddOns(selectedAddOns.filter(id => id !== addon._id));
+                          } else {
+                            setSelectedAddOns([...selectedAddOns, addon._id]);
+                          }
+                        }}
+                        className={`p-4 border text-left transition-all ${
+                          selectedAddOns.includes(addon._id)
+                            ? "border-saffron bg-saffron/5 ring-1 ring-saffron"
+                            : "border-stone-200 hover:border-stone-400"
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="font-medium text-stone-900">{addon.name}</div>
+                            {addon.description && (
+                              <div className="text-xs text-stone-500 mt-1">{addon.description}</div>
+                            )}
+                          </div>
+                          <div className="text-sm font-bold text-saffron">₹{addon.price.toLocaleString()}</div>
+                        </div>
+                        {selectedAddOns.includes(addon._id) && (
+                          <Check className="w-4 h-4 text-saffron mt-2" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-stone-400 mt-2 ml-1">Add-ons are charged once per booking.</p>
+                </div>
+              )}
+
+              {/* 4. PERSONAL DETAILS */}
               <div>
                 <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">Personal Details</label>
                 <div className="grid grid-cols-1 gap-4">
@@ -793,12 +905,28 @@ function BookingContent() {
                 <span>{nights > 0 ? `${nights} Nights` : "--"}</span>
               </div>
 
-              {/* INVOICE BREAKDOWN */}
+{/* INVOICE BREAKDOWN */}
               <div className="space-y-3 mb-6 pb-6 border-b border-stone-800">
                 <div className="flex justify-between text-sm opacity-70">
-                  <span>Base Rate</span>
+                  <span>Base Rate ({nights} nights)</span>
                   <span>₹{basePrice.toLocaleString()}</span>
                 </div>
+                {addOnsTotal > 0 && (
+                  <div className="flex justify-between text-sm opacity-70">
+                    <span>Add-ons</span>
+                    <span>₹{addOnsTotal.toLocaleString()}</span>
+                  </div>
+                )}
+                {selectedAddOns.length > 0 && (
+                  <div className="pl-2 space-y-1 border-l-2 border-stone-700 ml-1">
+                    {getSelectedAddOnsData().map((addon, i) => (
+                      <div key={i} className="flex justify-between text-xs opacity-60">
+                        <span className="truncate mr-2">{addon.name}</span>
+                        <span>₹{addon.price.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="flex justify-between text-sm opacity-70">
                   <span>Taxes & Fees (12%)</span>
                   <span>₹{taxes.toLocaleString()}</span>

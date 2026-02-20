@@ -1,9 +1,29 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Eye, XCircle, CheckCircle, Clock, X, MessageSquare } from "lucide-react";
+import { Search, Eye, XCircle, CheckCircle, Clock, X, MessageSquare, Sparkles } from "lucide-react";
 import { useBookings, BookingStatus, Booking } from "@/context/BookingContext";
 import toast from "react-hot-toast";
+
+function StatusBadge({ status }: { status: BookingStatus }) {
+    const styles = {
+        Confirmed: "bg-green-100 text-green-700 border-green-200",
+        Pending: "bg-yellow-100 text-yellow-700 border-yellow-200",
+        Cancelled: "bg-red-100 text-red-700 border-red-200"
+    };
+    const icons = {
+        Confirmed: <CheckCircle size={12} />,
+        Pending: <Clock size={12} />,
+        Cancelled: <XCircle size={12} />
+    };
+
+    return (
+        <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider border ${styles[status]}`}>
+            {icons[status]}
+            {status}
+        </span>
+    );
+}
 
 export default function BookingsPage() {
     const { bookings, updateBookingStatus, isLoading } = useBookings();
@@ -25,26 +45,6 @@ export default function BookingsPage() {
             await updateBookingStatus(id, "Cancelled");
             toast.success("Booking cancelled");
         }
-    };
-
-    const StatusBadge = ({ status }: { status: BookingStatus }) => {
-        const styles = {
-            Confirmed: "bg-green-100 text-green-700 border-green-200",
-            Pending: "bg-yellow-100 text-yellow-700 border-yellow-200",
-            Cancelled: "bg-red-100 text-red-700 border-red-200"
-        };
-        const icons = {
-            Confirmed: <CheckCircle size={12} />,
-            Pending: <Clock size={12} />,
-            Cancelled: <XCircle size={12} />
-        };
-
-        return (
-            <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider border ${styles[status]}`}>
-                {icons[status]}
-                {status}
-            </span>
-        );
     };
 
     return (
@@ -128,17 +128,25 @@ export default function BookingsPage() {
                                         <td className="px-6 py-4 text-sm text-stone-600">
                                             {booking.roomName}
                                         </td>
-                                        <td className="px-6 py-4">
+<td className="px-6 py-4">
                                             <div className="flex flex-col text-xs text-stone-600">
                                                 <span>In: {booking.checkIn}</span>
                                                 <span>Out: {booking.checkOut}</span>
                                             </div>
-                                            {booking.specialRequests && booking.specialRequests.length > 0 && (
-                                                <div className="mt-1 flex items-center gap-1 text-[10px] text-saffron font-bold">
-                                                    <MessageSquare size={10} />
-                                                    Requests
-                                                </div>
-                                            )}
+                                            <div className="mt-1 flex items-center gap-2">
+                                                {booking.specialRequests && booking.specialRequests.length > 0 && (
+                                                    <div className="flex items-center gap-1 text-[10px] text-saffron font-bold">
+                                                        <MessageSquare size={10} />
+                                                        Requests
+                                                    </div>
+                                                )}
+                                                {booking.addOns && booking.addOns.length > 0 && (
+                                                    <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-bold">
+                                                        <Sparkles size={10} />
+                                                        Add-ons
+                                                    </div>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 text-sm font-bold text-stone-900">
                                             ₹{booking.totalAmount.toLocaleString()}
@@ -239,8 +247,27 @@ export default function BookingsPage() {
                                 <div>
                                     <p className="text-xs text-stone-400 uppercase tracking-wider mb-1">Total Paid</p>
                                     <p className="text-lg font-serif font-bold text-saffron">₹{selectedBooking.totalAmount.toLocaleString()}</p>
-                                </div>
+</div>
                             </div>
+
+                            {/* Add-ons */}
+                            {selectedBooking.addOns && selectedBooking.addOns.length > 0 && (
+                                <div>
+                                    <p className="text-xs text-stone-400 uppercase tracking-wider mb-2">Add-ons</p>
+                                    <div className="bg-saffron/5 border border-saffron/20 rounded-lg p-3 space-y-2">
+                                        {selectedBooking.addOns.map((addon: { addOnId: string; name: string; price: number }, i: number) => (
+                                            <div key={i} className="flex justify-between text-sm">
+                                                <span className="text-stone-700">{addon.name}</span>
+                                                <span className="font-bold text-stone-900">₹{addon.price.toLocaleString()}</span>
+                                            </div>
+                                        ))}
+                                        <div className="border-t border-saffron/20 pt-2 flex justify-between text-sm font-bold">
+                                            <span className="text-stone-700">Add-ons Total</span>
+                                            <span className="text-saffron">₹{(selectedBooking.addOnsTotal || 0).toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Special Requests */}
                             <div>
