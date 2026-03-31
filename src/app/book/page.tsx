@@ -6,7 +6,7 @@ import Link from "next/link";
 import Script from "next/script";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { ArrowLeft, Calendar, User, Check, Phone, Mail, Loader2, CreditCard, MessageSquare, Sparkles } from "lucide-react";
+import { ArrowLeft, Calendar, User, Check, Phone, Mail, Loader2, CreditCard, MessageSquare, Sparkles, Mountain } from "lucide-react";
 // Email sent via API route (server-side)
 // PaymentModal removed - logic is handled inline
 import InvoiceModal from "@/components/InvoiceModal";
@@ -16,6 +16,23 @@ const ROOMS = [
   { id: "skyline-haven", name: "Skyline Haven", price: 8500, image: "/skyline-main.jpg" },
   { id: "zen-nest", name: "Zen Nest", price: 6500, image: "/zen-main.jpg" },
   { id: "sunlit-studio", name: "Sunlit Studio", price: 7200, image: "/sunlit-main.jpg" },
+];
+
+const PACKAGES = [
+  {
+    id: 'solo-triund',
+    name: 'Solo Triund Package',
+    tagline: '1 Guest · 3 Days / 2 Nights',
+    inclusions: ['2-night Winterstone stay', 'Guided Triund trek', 'Breakfast & dinner included', 'Trek equipment provided'],
+    price: 5000,
+  },
+  {
+    id: 'couple-triund',
+    name: 'Couple Triund Package',
+    tagline: '2 Guests · 3 Days / 2 Nights',
+    inclusions: ['2-night Winterstone stay', 'Guided Triund trek for two', 'Breakfast & dinner included', 'Trek equipment provided'],
+    price: 7000,
+  },
 ];
 
 // Razorpay response interfaces
@@ -85,6 +102,7 @@ const [name, setName] = useState("");
   // ADD-ONS STATE
   const [availableAddOns, setAvailableAddOns] = useState<AddOn[]>([]);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]); // IDs of selected add-ons
+  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
 
   // PAYMENT & SENDING STATES
   const [isProcessing, setIsProcessing] = useState(false);
@@ -280,8 +298,10 @@ const calculateTotal = () => {
   const total = calculateTotal();
   const basePrice = total;
   const addOnsTotal = calculateAddOnsTotal();
-  const taxes = Math.round((basePrice + addOnsTotal) * 0.12);
-  const grandTotal = basePrice + addOnsTotal + taxes;
+  const selectedPackageData = PACKAGES.find(p => p.id === selectedPackage) ?? null;
+  const packageTotal = selectedPackageData?.price ?? 0;
+  const taxes = Math.round((basePrice + addOnsTotal + packageTotal) * 0.12);
+  const grandTotal = basePrice + addOnsTotal + packageTotal + taxes;
   const nights = total / selectedRoom.price || 0;
 
   // VALIDATION
@@ -409,8 +429,10 @@ const newBooking = {
         checkIn,
         checkOut,
         totalAmount: grandTotal,
-        addOns: getSelectedAddOnsData(),
-        addOnsTotal: addOnsTotal,
+        addOns: selectedPackageData
+          ? [...getSelectedAddOnsData(), { addOnId: `pkg_${selectedPackage!}`, name: selectedPackageData.name, price: selectedPackageData.price }]
+          : getSelectedAddOnsData(),
+        addOnsTotal: addOnsTotal + packageTotal,
         status: "Pending" as const,
         specialRequests: finalRequests,
         assignedUnit: assignedUnit || undefined,
@@ -879,6 +901,51 @@ setInvoiceData({
                 <p className="text-[10px] text-stone-400 mt-2 ml-1">* Special requests are subject to availability and may incur additional charges.</p>
               </div>
 
+              {/* 5. PACKAGES */}
+              <div>
+                <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-1 flex items-center gap-2">
+                  <Mountain className="w-4 h-4 text-saffron" />
+                  Packages &amp; Experiences
+                </label>
+                <p className="text-[11px] text-stone-400 mb-3">Optional — add a curated mountain experience to your stay.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {PACKAGES.map((pkg) => (
+                    <button
+                      key={pkg.id}
+                      type="button"
+                      onClick={() => setSelectedPackage(selectedPackage === pkg.id ? null : pkg.id)}
+                      className={`p-4 border text-left transition-all ${
+                        selectedPackage === pkg.id
+                          ? "border-saffron bg-saffron/5 ring-1 ring-saffron"
+                          : "border-stone-200 hover:border-stone-400"
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <div className="font-medium text-stone-900">{pkg.name}</div>
+                          <div className="text-[11px] text-stone-400 mt-0.5">{pkg.tagline}</div>
+                        </div>
+                        <div className="text-sm font-bold text-saffron shrink-0 ml-2">₹{pkg.price.toLocaleString()}</div>
+                      </div>
+                      <ul className="space-y-1 mt-2">
+                        {pkg.inclusions.map((item, i) => (
+                          <li key={i} className="flex items-center gap-1.5 text-xs text-stone-500">
+                            <Check className="w-3 h-3 text-saffron shrink-0" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                      {selectedPackage === pkg.id && (
+                        <div className="mt-2 pt-2 border-t border-saffron/20 flex items-center gap-1 text-xs text-saffron font-semibold">
+                          <Check className="w-3 h-3" /> Added to your stay
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-stone-400 mt-2 ml-1">* Trek dates are coordinated by the lodge upon arrival. Package price is added to your total.</p>
+              </div>
+
             </div>
           </div>
 
@@ -915,6 +982,12 @@ setInvoiceData({
                   <div className="flex justify-between text-sm opacity-70">
                     <span>Add-ons</span>
                     <span>₹{addOnsTotal.toLocaleString()}</span>
+                  </div>
+                )}
+                {packageTotal > 0 && (
+                  <div className="flex justify-between text-sm opacity-70">
+                    <span>{selectedPackageData?.name}</span>
+                    <span>₹{packageTotal.toLocaleString()}</span>
                   </div>
                 )}
                 {selectedAddOns.length > 0 && (

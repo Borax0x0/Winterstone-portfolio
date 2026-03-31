@@ -23,6 +23,8 @@ export interface IBooking extends Document {
     razorpayPaymentId?: string;
     specialRequests?: string[];
     assignedUnit?: string;
+    source: string;
+    externalBookingId?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -55,6 +57,8 @@ const BookingSchema: Schema<IBooking> = new Schema(
         razorpayPaymentId: { type: String },
         specialRequests: { type: [String], default: [] },
         assignedUnit: { type: String },
+        source: { type: String, default: 'Website' },
+        externalBookingId: { type: String, sparse: true, unique: true },
     },
     {
         timestamps: true,

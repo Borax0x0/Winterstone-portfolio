@@ -23,6 +23,7 @@ export interface Booking {
     addOnsTotal?: number;
     status: BookingStatus;
     specialRequests?: string[];
+    source?: string;
 }
 
 interface PaymentOrder {

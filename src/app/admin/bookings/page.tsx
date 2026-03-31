@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Eye, XCircle, CheckCircle, Clock, X, MessageSquare, Sparkles } from "lucide-react";
+import { Search, Eye, XCircle, CheckCircle, Clock, X, MessageSquare, Sparkles, RefreshCw, Globe } from "lucide-react";
 import { useBookings, BookingStatus, Booking } from "@/context/BookingContext";
 import toast from "react-hot-toast";
 
@@ -25,11 +25,51 @@ function StatusBadge({ status }: { status: BookingStatus }) {
     );
 }
 
+const SOURCE_STYLES: Record<string, string> = {
+    'Website':     'bg-blue-50 text-blue-700 border-blue-200',
+    'Booking.com': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    'Agoda':       'bg-red-50 text-red-700 border-red-200',
+    'MakeMyTrip':  'bg-orange-50 text-orange-700 border-orange-200',
+    'Expedia':     'bg-yellow-50 text-yellow-700 border-yellow-200',
+    'Airbnb':      'bg-rose-50 text-rose-700 border-rose-200',
+};
+
+function SourceBadge({ source }: { source?: string }) {
+    const label = source || 'Website';
+    const style = SOURCE_STYLES[label] || 'bg-stone-100 text-stone-600 border-stone-200';
+    return (
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border ${style}`}>
+            <Globe size={9} />
+            {label}
+        </span>
+    );
+}
+
 export default function BookingsPage() {
     const { bookings, updateBookingStatus, isLoading } = useBookings();
     const [filterStatus, setFilterStatus] = useState<BookingStatus | "All">("All");
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const handleEzeeSync = async () => {
+        setIsSyncing(true);
+        try {
+            const res = await fetch('/api/sync/ezee', { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+                toast.success(data.message || 'Sync complete');
+                // Reload to show new bookings
+                window.location.reload();
+            } else {
+                toast.error(data.error || 'Sync failed');
+            }
+        } catch {
+            toast.error('Could not connect to eZee');
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
     // Filter Logic
     const filteredBookings = bookings.filter(booking => {
@@ -55,6 +95,14 @@ export default function BookingsPage() {
                     <h1 className="text-3xl font-serif font-bold text-white">Bookings</h1>
                     <p className="text-stone-400 text-sm mt-1">Manage and track all hotel reservations</p>
                 </div>
+                <button
+                    onClick={handleEzeeSync}
+                    disabled={isSyncing}
+                    className="flex items-center gap-2 px-4 py-2 bg-saffron text-white text-sm font-bold rounded-lg hover:bg-saffron/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                    <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+                    {isSyncing ? 'Syncing...' : 'Sync from eZee'}
+                </button>
             </div>
 
             {/* FILTERS & SEARCH */}
@@ -99,6 +147,7 @@ export default function BookingsPage() {
                                 <th className="px-6 py-4 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">Room</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">Dates</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">Total</th>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">Source</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">Status</th>
                                 <th className="px-6 py-4 text-right text-xs font-bold text-stone-500 uppercase tracking-wider">Actions</th>
                             </tr>
@@ -106,7 +155,7 @@ export default function BookingsPage() {
                         <tbody className="divide-y divide-stone-100">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-12 text-center text-stone-500">
+                                    <td colSpan={8} className="px-6 py-12 text-center text-stone-500">
                                         <div className="flex justify-center items-center gap-3">
                                             <div className="animate-spin h-5 w-5 border-2 border-saffron border-t-transparent rounded-full"></div>
                                             Loading Bookings...
@@ -152,6 +201,9 @@ export default function BookingsPage() {
                                             ₹{booking.totalAmount.toLocaleString()}
                                         </td>
                                         <td className="px-6 py-4">
+                                            <SourceBadge source={booking.source} />
+                                        </td>
+                                        <td className="px-6 py-4">
                                             <StatusBadge status={booking.status} />
                                         </td>
                                         <td className="px-6 py-4 text-right">
@@ -178,7 +230,7 @@ export default function BookingsPage() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-12 text-center text-stone-400 text-sm">
+                                    <td colSpan={8} className="px-6 py-12 text-center text-stone-400 text-sm">
                                         No bookings found matching your filters.
                                     </td>
                                 </tr>
