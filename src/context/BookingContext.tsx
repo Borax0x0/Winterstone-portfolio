@@ -41,6 +41,7 @@ interface BookingContextType {
     updateBookingStatus: (id: string, status: BookingStatus) => Promise<void>;
     deleteBooking: (id: string) => Promise<void>;
     initiatePayment: (amount: number, currency?: string) => Promise<PaymentOrder>;
+    refreshBookings: () => Promise<void>;
 }
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
@@ -50,20 +51,22 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
 
     // Fetch Bookings
-    useEffect(() => {
-        const fetchBookings = async () => {
-            try {
-                const res = await fetch('/api/bookings');
-                if (res.ok) {
-                    const data = await res.json();
-                    setBookings(data);
-                }
-            } catch (error) {
-                console.error("Failed to fetch bookings", error);
-            } finally {
-                setIsLoading(false);
+    const fetchBookings = async () => {
+        setIsLoading(true);
+        try {
+            const res = await fetch('/api/bookings');
+            if (res.ok) {
+                const data = await res.json();
+                setBookings(data);
             }
-        };
+        } catch (error) {
+            console.error("Failed to fetch bookings", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchBookings();
     }, []);
 
@@ -133,7 +136,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <BookingContext.Provider value={{ bookings, isLoading, addBooking, updateBookingStatus, deleteBooking, initiatePayment }}>
+        <BookingContext.Provider value={{ bookings, isLoading, addBooking, updateBookingStatus, deleteBooking, initiatePayment, refreshBookings: fetchBookings }}>
             {children}
         </BookingContext.Provider>
     );

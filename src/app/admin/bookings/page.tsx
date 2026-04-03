@@ -46,11 +46,27 @@ function SourceBadge({ source }: { source?: string }) {
 }
 
 export default function BookingsPage() {
-    const { bookings, updateBookingStatus, isLoading } = useBookings();
+    const { bookings, updateBookingStatus, isLoading, refreshBookings } = useBookings();
+    
+    // Core Filters
     const [filterStatus, setFilterStatus] = useState<BookingStatus | "All">("All");
     const [searchTerm, setSearchTerm] = useState("");
+    
+    // Advanced Filters
+    const [filterSource, setFilterSource] = useState<string>("All");
+    const [filterMonth, setFilterMonth] = useState<string>("All");
+    const [quickFilter, setQuickFilter] = useState<"All" | "TodayIn" | "TodayOut">("All");
+    const [sortBy, setSortBy] = useState<string>("checkIn_asc");
+    
     const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
     const [isSyncing, setIsSyncing] = useState(false);
+
+    // Derived unique properties for dropdowns
+    const uniqueSources = ["All", ...Array.from(new Set(bookings.map(b => b.source || 'Website'))).sort()];
+    const uniqueMonths = ["All", ...Array.from(new Set(bookings.map(b => {
+        const d = new Date(b.checkIn);
+        return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 7);
+    }).filter(Boolean))).sort().reverse()];
 
     const handleEzeeSync = async () => {
         setIsSyncing(true);
@@ -58,9 +74,10 @@ export default function BookingsPage() {
             const res = await fetch('/api/sync/ezee', { method: 'POST' });
             const data = await res.json();
             if (res.ok) {
-                toast.success(data.message || 'Sync complete');
-                // Reload to show new bookings
-                window.location.reload();
+                const { new: newB, updated, cancelled } = data.synced || {};
+                toast.success(`Sync complete: ${newB} new, ${updated} updated, ${cancelled} cancelled`);
+                // Reload data seamlessly
+                await refreshBookings();
             } else {
                 toast.error(data.error || 'Sync failed');
             }
@@ -72,12 +89,49 @@ export default function BookingsPage() {
     };
 
     // Filter Logic
-    const filteredBookings = bookings.filter(booking => {
-        const matchesStatus = filterStatus === "All" || booking.status === filterStatus;
-        const matchesSearch = booking.guestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            booking.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (booking._id || booking.id || "").toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesStatus && matchesSearch;
+    let filteredBookings = bookings.filter(booking => {
+        // Status filter
+        if (filterStatus !== "All" && booking.status !== filterStatus) return false;
+        
+        // Source filter
+        if (filterSource !== "All" && (booking.source || 'Website') !== filterSource) return false;
+
+        // Month filter
+        if (filterMonth !== "All") {
+            const dIn = new Date(booking.checkIn);
+            const dOut = new Date(booking.checkOut);
+            const inMonth = !isNaN(dIn.getTime()) ? dIn.toISOString().slice(0, 7) : "";
+            const outMonth = !isNaN(dOut.getTime()) ? dOut.toISOString().slice(0, 7) : "";
+            if (inMonth !== filterMonth && outMonth !== filterMonth) return false;
+        }
+
+        // Quick Filters
+        const todayStr = new Date().toLocaleDateString('en-CA'); // e.g., '2026-04-16' in local time properly configured by environment. We'll simulate standard formatting logic:
+        const todayParts = new Date();
+        const formattedToday = `${todayParts.getFullYear()}-${String(todayParts.getMonth() + 1).padStart(2, '0')}-${String(todayParts.getDate()).padStart(2, '0')}`;
+        
+        if (quickFilter === "TodayIn" && booking.checkIn !== formattedToday) return false;
+        if (quickFilter === "TodayOut" && booking.checkOut !== formattedToday) return false;
+
+        // Search terminology
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            const matchesSearch = booking.guestName.toLowerCase().includes(term) ||
+                booking.email.toLowerCase().includes(term) ||
+                (booking._id || booking.id || "").toLowerCase().includes(term);
+            if (!matchesSearch) return false;
+        }
+
+        return true;
+    });
+
+    // Sort Logic
+    filteredBookings = filteredBookings.sort((a, b) => {
+        if (sortBy === "checkIn_asc") return new Date(a.checkIn).getTime() - new Date(b.checkIn).getTime();
+        if (sortBy === "checkIn_desc") return new Date(b.checkIn).getTime() - new Date(a.checkIn).getTime();
+        if (sortBy === "total_desc") return b.totalAmount - a.totalAmount;
+        if (sortBy === "total_asc") return a.totalAmount - b.totalAmount;
+        return 0;
     });
 
     const handleCancel = async (id: string) => {
@@ -106,33 +160,103 @@ export default function BookingsPage() {
             </div>
 
             {/* FILTERS & SEARCH */}
-            <div className="bg-white p-4 rounded-lg border border-stone-200 shadow-sm mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
-                {/* Status Tabs */}
-                <div className="flex bg-stone-100 p-1 rounded-lg">
-                    {(["All", "Confirmed", "Pending", "Cancelled"] as const).map((status) => (
-                        <button
-                            key={status}
-                            onClick={() => setFilterStatus(status)}
-                            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${filterStatus === status
-                                ? "bg-white text-stone-900 shadow-sm"
-                                : "text-stone-500 hover:text-stone-900"
-                                }`}
+            <div className="bg-white p-4 rounded-lg border border-stone-200 shadow-sm mb-6 flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    {/* Status Tabs */}
+                    <div className="flex bg-stone-100 p-1 rounded-lg">
+                        {(["All", "Confirmed", "Pending", "Cancelled"] as const).map((status) => (
+                            <button
+                                key={status}
+                                onClick={() => setFilterStatus(status)}
+                                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${filterStatus === status
+                                    ? "bg-white text-stone-900 shadow-sm"
+                                    : "text-stone-500 hover:text-stone-900"
+                                    }`}
+                            >
+                                {status}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Quick Filters */}
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => setQuickFilter("All")}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-md border ${quickFilter === "All" ? "bg-stone-800 text-white border-stone-800" : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"}`}
                         >
-                            {status}
+                            All
                         </button>
-                    ))}
+                        <button 
+                            onClick={() => setQuickFilter("TodayIn")}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-md border ${quickFilter === "TodayIn" ? "bg-blue-600 text-white border-blue-600" : "bg-white text-blue-600 border-blue-200 hover:bg-blue-50"}`}
+                        >
+                            Today's Check-ins
+                        </button>
+                        <button 
+                            onClick={() => setQuickFilter("TodayOut")}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-md border ${quickFilter === "TodayOut" ? "bg-orange-600 text-white border-orange-600" : "bg-white text-orange-600 border-orange-200 hover:bg-orange-50"}`}
+                        >
+                            Today's Check-outs
+                        </button>
+                    </div>
+
+                    {/* Search Bar */}
+                    <div className="relative w-full md:w-64">
+                        <Search className="absolute left-3 top-2.5 text-stone-400 w-4 h-4" />
+                        <input
+                            type="text"
+                            placeholder="Search guest or ID..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 bg-stone-50 border border-stone-200 rounded text-sm focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron"
+                        />
+                    </div>
                 </div>
 
-                {/* Search Bar */}
-                <div className="relative w-full md:w-64">
-                    <Search className="absolute left-3 top-2.5 text-stone-400 w-4 h-4" />
-                    <input
-                        type="text"
-                        placeholder="Search guest or ID..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 bg-stone-50 border border-stone-200 rounded text-sm focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron"
-                    />
+                {/* Secondary Advanced Filters */}
+                <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-stone-100">
+                    {/* Source Dropdown */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-stone-500 uppercase">Source:</span>
+                        <select 
+                            value={filterSource} 
+                            onChange={(e) => setFilterSource(e.target.value)}
+                            className="bg-stone-50 border border-stone-200 text-sm rounded px-2 py-1.5 focus:outline-none focus:border-saffron"
+                        >
+                            {uniqueSources.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                    </div>
+
+                    {/* Month Dropdown */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-stone-500 uppercase">Stay Month:</span>
+                        <select 
+                            value={filterMonth} 
+                            onChange={(e) => setFilterMonth(e.target.value)}
+                            className="bg-stone-50 border border-stone-200 text-sm rounded px-2 py-1.5 focus:outline-none focus:border-saffron"
+                        >
+                            {uniqueMonths.map(m => (
+                                <option key={m} value={m}>
+                                    {m === "All" ? "All Time" : new Date(`${m}-01T00:00:00Z`).toLocaleString('default', { month: 'long', year: 'numeric' })}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Sort Dropdown */}
+                    <div className="flex items-center gap-2 ml-auto">
+                        <span className="text-xs font-bold text-stone-500 uppercase">Sort By:</span>
+                        <select 
+                            value={sortBy} 
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="bg-stone-50 border border-stone-200 text-sm rounded px-2 py-1.5 focus:outline-none focus:border-saffron"
+                        >
+                            <option value="checkIn_asc">Check-in Date (Earliest First)</option>
+                            <option value="checkIn_desc">Check-in Date (Latest First)</option>
+                            <option value="total_desc">Total Amount (High to Low)</option>
+                            <option value="total_asc">Total Amount (Low to High)</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 

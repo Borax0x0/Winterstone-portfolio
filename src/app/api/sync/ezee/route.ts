@@ -31,24 +31,14 @@ function formatDate(d: Date): string {
     return d.toISOString().split('T')[0];
 }
 
-// Split a date range into 2-day chunks (eZee's max range per request)
+// Request the full date range in one chunk to avoid 'Duplicate request' rate limits
 function buildDateRanges(daysBack: number, daysFwd: number): { from: string; to: string }[] {
-    const ranges: { from: string; to: string }[] = [];
     const start = new Date();
     start.setDate(start.getDate() - daysBack);
     const end = new Date();
     end.setDate(end.getDate() + daysFwd);
 
-    const cur = new Date(start);
-    while (cur <= end) {
-        const from = formatDate(cur);
-        const next = new Date(cur);
-        next.setDate(next.getDate() + 1);
-        const to = next > end ? formatDate(end) : formatDate(next);
-        ranges.push({ from, to });
-        cur.setDate(cur.getDate() + 2);
-    }
-    return ranges;
+    return [{ from: formatDate(start), to: formatDate(end) }];
 }
 
 export async function POST() {
@@ -85,6 +75,11 @@ export async function POST() {
                 });
 
                 const xmlText = await res.text();
+
+                // --- DEBUG LOGGING ---
+                console.log(`\n\n--- eZee XML Response for range ${from}–${to} ---`);
+                console.log(xmlText);
+                console.log(`-------------------------------------------\n\n`);
 
                 // Skip if error or empty response
                 if (!xmlText || xmlText.includes('<status>error</status>') || !xmlText.includes('<Reservation')) {

@@ -44,7 +44,7 @@ export default function RoomPieChart() {
                         <Tooltip
                             contentStyle={{
                                 backgroundColor: '#1c1917',
-                                border: '1px solid #44403c',
+                                border: '1px solid #ffffffff',
                                 borderRadius: '8px',
                             }}
                             formatter={(value: number | undefined) => [
