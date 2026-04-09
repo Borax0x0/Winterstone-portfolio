@@ -40,7 +40,7 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
         const transporter = getTransporter();
 
         await transporter.sendMail({
-            from: `"Winterstone Lodge" <${process.env.EMAIL_USER || 'noreply@winterstone.com'}>`,
+            from: `"Winterstone Lodge" <${process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@winterstone.com'}>`,
             to: options.to,
             subject: options.subject,
             html: options.html,
