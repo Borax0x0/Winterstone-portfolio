@@ -46,4 +46,4 @@ Access at `/admin`. Create a user with `role: "admin"` in MongoDB.
 *Built as a client project. Portfolio showcase.*
 Triggering Vercel deployment.
 
-## lol
+
