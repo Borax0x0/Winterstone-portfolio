@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import { verifyPassword } from "@/lib/password";
 import dbConnect from "@/lib/db";
 import User from "@/models/User";
@@ -19,6 +20,10 @@ interface ExtendedToken {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
     providers: [
+        Google({
+            clientId: process.env.GOOGLE_CLIENT_ID!,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        }),
         Credentials({
             name: "Credentials",
             credentials: {
@@ -69,11 +74,38 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         signIn: "/login",
     },
     callbacks: {
-        async jwt({ token, user }) {
+        async signIn({ user, account }) {
+            if (account?.provider === "google") {
+                await dbConnect();
+                const existingUser = await User.findOne({ email: user.email });
+                if (!existingUser) {
+                    await User.create({
+                        name: user.name,
+                        email: user.email,
+                        role: "guest",
+                        emailVerified: true
+                    });
+                }
+                return true;
+            }
+            return true;
+        },
+        async jwt({ token, user, account }) {
             if (user) {
-                // User comes from authorize callback with role and id
-                token.role = (user as unknown as ExtendedUser).role;
-                token.id = (user as unknown as ExtendedUser).id;
+                if (account?.provider === "google") {
+                    await dbConnect();
+                    const dbUser = await User.findOne({ email: user.email });
+                    if (dbUser) {
+                        token.role = dbUser.role;
+                        token.id = dbUser._id.toString();
+                    } else {
+                        token.role = "guest";
+                    }
+                } else {
+                    // User comes from authorize callback with role and id
+                    token.role = (user as unknown as ExtendedUser).role;
+                    token.id = (user as unknown as ExtendedUser).id;
+                }
             }
             return token;
         },

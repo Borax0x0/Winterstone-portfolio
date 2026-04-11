@@ -11,6 +11,7 @@ import { ArrowLeft, Calendar, User, Check, Phone, Mail, Loader2, CreditCard, Mes
 // PaymentModal removed - logic is handled inline
 import InvoiceModal from "@/components/InvoiceModal";
 import { useBookings } from "@/context/BookingContext"; // Import Context
+import { useAuth } from "@/context/AuthContext";
 
 const ROOMS = [
   { id: "skyline-haven", name: "Skyline Haven", price: 8500, image: "/skyline-main.jpg" },
@@ -83,6 +84,7 @@ interface AddOn {
 function BookingContent() {
   const searchParams = useSearchParams();
   const { initiatePayment } = useBookings(); // Use Context
+  const { user } = useAuth();
 
   // STATE
   const [selectedRoomId, setSelectedRoomId] = useState(ROOMS[0].id);
@@ -95,9 +97,17 @@ function BookingContent() {
   const [assignedUnit, setAssignedUnit] = useState("");
   const [isCheckingUnits, setIsCheckingUnits] = useState(false);
 
-const [name, setName] = useState("");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+
+  // Auto-fill from session
+  useEffect(() => {
+    if (user) {
+      if (user.name) setName(user.name);
+      if (user.email) setEmail(user.email);
+    }
+  }, [user]);
 
   // ADD-ONS STATE
   const [availableAddOns, setAvailableAddOns] = useState<AddOn[]>([]);

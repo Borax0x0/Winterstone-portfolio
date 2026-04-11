@@ -29,10 +29,22 @@ export async function POST(request: Request) {
         // Check if user already exists
         const existingUser = await User.findOne({ email: email.toLowerCase() });
         if (existingUser) {
-            return NextResponse.json(
-                { error: 'An account with this email already exists' },
-                { status: 409 }
-            );
+            if (existingUser.password) {
+                return NextResponse.json(
+                    { error: 'An account with this email already exists' },
+                    { status: 409 }
+                );
+            } else {
+                // Google-first account setting a password limit
+                const hashedPassword = await hashPassword(password);
+                existingUser.password = hashedPassword;
+                if (!existingUser.name) existingUser.name = name;
+                await existingUser.save();
+                return NextResponse.json({
+                    message: 'Password added! You can now log in with email.',
+                    userId: existingUser._id,
+                }, { status: 201 });
+            }
         }
 
         // Hash password
