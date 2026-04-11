@@ -110,10 +110,8 @@ const [name, setName] = useState("");
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null); // Store confirmed booking data
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // EMAIL VERIFICATION STATES
-  const [showVerifyModal, setShowVerifyModal] = useState(false);
-  const [isSendingVerification, setIsSendingVerification] = useState(false);
-  const [verificationMessage, setVerificationMessage] = useState("");
+  // Auth modal state (for post-booking account creation prompt)
+  const [showCreateAccountPrompt, setShowCreateAccountPrompt] = useState(false);
 
   // BLOCKED DATES (already booked) - as Date objects for DatePicker
   const [blockedDates, setBlockedDates] = useState<Date[]>([]);
@@ -327,18 +325,7 @@ const calculateTotal = () => {
     setIsProcessing(true);
 
     try {
-      // Check if email is verified first
-      const verifyRes = await fetch(`/api/auth/check-verification?email=${encodeURIComponent(email)}`);
-      const verifyData = await verifyRes.json();
-
-      if (!verifyRes.ok || !verifyData.verified) {
-        // Email not verified - show verification modal
-        setShowVerifyModal(true);
-        setIsProcessing(false);
-        return;
-      }
-
-      // Email verified - proceed with payment
+      // Guest checkout — no verification required
       // 1. Create Order
       const order = await initiatePayment(grandTotal, "INR");
       console.log("Order Created:", order);
@@ -494,7 +481,7 @@ const newBooking = {
     };
 
     try {
-      await fetch('/api/email/booking', {
+      const emailRes = await fetch('/api/email/booking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -503,6 +490,10 @@ const newBooking = {
           taxes: `₹${taxes.toLocaleString()}`,
         }),
       });
+      if (!emailRes.ok) {
+        const errText = await emailRes.text();
+        console.error('Booking confirmation email failed:', errText);
+      }
 
       setIsProcessing(false);
       setIsSuccess(true);
@@ -523,6 +514,7 @@ setInvoiceData({
       });
 
       setIsInvoiceOpen(true);
+      setShowCreateAccountPrompt(true);
 
     } catch (error) {
       console.error("Email Failed...", error);
@@ -549,31 +541,7 @@ setInvoiceData({
     }
   };
 
-  // --- RESEND VERIFICATION EMAIL ---
-  const handleResendVerification = async () => {
-    setIsSendingVerification(true);
-    setVerificationMessage("");
 
-    try {
-      const res = await fetch('/api/auth/check-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setVerificationMessage("Verification email sent! Check your console (dev) or inbox.");
-      } else {
-        setVerificationMessage(data.error || "Failed to send verification email");
-      }
-    } catch {
-      setVerificationMessage("Something went wrong. Please try again.");
-    } finally {
-      setIsSendingVerification(false);
-    }
-  };
 
   return (
     <>
@@ -589,60 +557,23 @@ setInvoiceData({
           bookingDetails={invoiceData}
         />
 
-        {/* EMAIL VERIFICATION MODAL */}
-        {showVerifyModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-            <div className="bg-white w-full max-w-md p-8 rounded-sm shadow-2xl">
-              <div className="text-center mb-6">
-                <Mail className="w-12 h-12 text-saffron mx-auto mb-4" />
-                <h3 className="font-serif text-2xl text-stone-900 mb-2">Verify Your Email</h3>
-                <p className="text-stone-600 text-sm">
-                  To receive your booking confirmation, please verify your email address.
-                </p>
-              </div>
-
-              <div className="bg-stone-50 p-4 rounded mb-6 text-center">
-                <span className="text-stone-500 text-sm">Email: </span>
-                <span className="font-semibold text-stone-900">{email}</span>
-              </div>
-
-              {verificationMessage && (
-                <div className={`text-sm p-3 rounded mb-4 text-center ${verificationMessage.includes("sent")
-                  ? "bg-green-50 text-green-700"
-                  : "bg-red-50 text-red-700"
-                  }`}>
-                  {verificationMessage}
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <button
-                  onClick={handleResendVerification}
-                  disabled={isSendingVerification}
-                  className="w-full bg-saffron text-stone-900 py-3 text-xs font-bold tracking-widest uppercase hover:bg-stone-900 hover:text-white transition-colors disabled:opacity-50"
-                >
-                  {isSendingVerification ? (
-                    <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                  ) : (
-                    "Send Verification Email"
-                  )}
-                </button>
-
-                <button
-                  onClick={() => {
-                    setShowVerifyModal(false);
-                    setVerificationMessage("");
-                  }}
-                  className="w-full border border-stone-200 text-stone-600 py-3 text-xs font-bold tracking-widest uppercase hover:bg-stone-50 transition-colors"
-                >
-                  I&apos;ll Verify Later
-                </button>
-              </div>
-
-              <p className="text-xs text-stone-400 text-center mt-4">
-                Check your console (dev) for the verification link
-              </p>
-            </div>
+        {/* POST-BOOKING ACCOUNT CREATION PROMPT */}
+        {showCreateAccountPrompt && (
+          <div className="fixed bottom-6 right-6 z-[110] bg-white shadow-2xl rounded border border-stone-200 p-5 max-w-xs">
+            <button
+              onClick={() => setShowCreateAccountPrompt(false)}
+              className="absolute top-3 right-3 text-stone-400 hover:text-stone-700 transition-colors"
+            >
+              ✕
+            </button>
+            <p className="text-xs font-bold uppercase tracking-widest text-stone-400 mb-1">Want to manage your booking?</p>
+            <p className="text-sm text-stone-700 mb-3">Create an account to track reservations, request modifications, and get exclusive offers.</p>
+            <button
+              onClick={() => { setShowCreateAccountPrompt(false); }}
+              className="w-full bg-stone-900 text-white py-2.5 text-xs font-bold tracking-widest uppercase hover:bg-saffron hover:text-stone-900 transition-colors"
+            >
+              Create Account
+            </button>
           </div>
         )}
 
