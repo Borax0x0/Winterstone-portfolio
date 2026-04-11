@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { MapPin, Phone, Mail, Instagram, Twitter, ExternalLink, ChevronDown } from "lucide-react";
+import { MapPin, Phone, Mail, Instagram, ExternalLink, ChevronDown } from "lucide-react";
 import WeatherWidget from "./WeatherWidget";
 import NewsletterForm from "./NewsletterForm";
 import { motion, AnimatePresence } from "framer-motion";
@@ -92,18 +92,16 @@ export default function Footer() {
                   <Phone size={16} />
                   <span>+91 99582 70492</span>
                 </a>
-                <a href="mailto:winterstone110104@gmail.com" className="flex items-center gap-3 hover:text-white transition-colors">
+                <a href="mailto:thewinterstoneofficial@gmail.com" className="flex items-center gap-3 hover:text-white transition-colors">
                   <Mail size={16} />
-                  <span>winterstone110104@gmail.com</span>
+                  <span>thewinterstoneofficial@gmail.com</span>
                 </a>
               </div>
 
               <div className="flex gap-4">
-                <a href="https://www.instagram.com/thewinterstone/" target="_blank" rel="noopener noreferrer" className="p-2 -m-2">
-                  <Instagram className="w-5 h-5 hover:text-saffron transition-colors" />
-                </a>
-                <a href="#" className="p-2 -m-2">
-                  <Twitter className="w-5 h-5 hover:text-saffron transition-colors" />
+                <a href="https://www.instagram.com/thewinterstone/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-saffron transition-colors group">
+                  <Instagram size={18} />
+                  <span className="text-sm font-light">@thewinterstone</span>
                 </a>
               </div>
             </div>

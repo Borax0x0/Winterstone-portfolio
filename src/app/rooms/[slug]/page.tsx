@@ -15,28 +15,31 @@ const fallbackRoomsData = [
   {
     slug: "skyline-haven",
     name: "Skyline Haven",
-    price: 8500,
-    heroImage: "/skyline-main.jpg",
-    gallery: ["/skyline-hero-1.jpg", "/skyline-hero-2.jpg", "/skyline-1.jpg", "/skyline-2.jpg", "/bath-1.jpg"],
-    description: "Perched high above the valley, the Skyline Haven is designed for the observer. Step out onto your private balcony to witness the mist rolling over the Himalayas. The interior blends warm wood tones with modern luxury.",
+    price: 2599,
+    heroImage: "/skyline-room-1.jpg",
+    gallery: ["/skyline-balcony-4.jpg", "/skyline-room-2.jpg", "/skyline-balcony-1.jpg", "/skyline-balcony-2.jpg", "/skyline-balcony-3.jpg", "/skyline-bathroom-1.jpg", "/skyline-bathroom-2.jpg"],
+    videoUrl: "/skyline-room-tour.mp4",
+    description: "Our premier offering, defined by its warm intimacy and classic alpine elegance. The Skyline Haven features a striking solid wood headboard and premium linens, creating a deeply private retreat. Soft sconce lighting sets the mood, making it the perfect end-of-day sanctuary after exploring the mountains.",
     amenities: ["Private Mountain Balcony", "Valley View", "King Size Bed", "Heated Floors", "Work Desk", "High-Speed Wi-Fi"],
   },
   {
     slug: "zen-nest",
     name: "Zen Nest",
-    price: 6500,
-    heroImage: "/zen-main.jpg",
-    gallery: ["/zen-hero-1.jpg", "/zen-hero-2.jpg", "/zen-1.jpg", "/zen-2.jpg", "/bath-2.jpg"],
-    description: "A sanctuary dedicated to mindfulness. The Zen Nest features designated space for yoga, meditation, and stillness. Minimalist decor and soft ambient lighting allow you to disconnect from the noise and reconnect with yourself.",
+    price: 1599,
+    heroImage: "/zen-room-1.jpg",
+    gallery: ["/zen-room-2.jpg", "/zen-window.jpg", "/zen-bathroom-1.jpg", "/zen-bathroom-2.jpg"],
+    videoUrl: null,
+    description: "A spacious, grounded escape bathed in mountain light. The Zen Nest features wall-to-wall windows draped in rich golden textiles, plush velvet seating, and a striking wooden bedframe. With plenty of open floor space and sunlight reflecting across the pristine tilework, it's designed for absolute comfort and quiet reflection.",
     amenities: ["Yoga & Meditation Space", "Soundproofing", "Meditation Cushions", "Herbal Tea Station", "Dimmable Lighting", "Queen Bed"],
   },
   {
     slug: "sunlit-studio",
     name: "Sunlit Studio",
-    price: 7200,
-    heroImage: "/sunlit-main.jpg",
-    gallery: ["/sunlit-hero-1.jpg", "/sunlit-hero-2.jpg", "/sunlit-1.jpg", "/sunlit-2.jpg", "/bath-1.jpg"],
-    description: "Bathed in natural light, the Sunlit Studio blurs the line between indoors and out. Located on the ground floor for easy access, the massive front-facing windows frame the pine forest, bringing the golden hour directly to your bedside.",
+    price: 2199,
+    heroImage: "/sunlit-room-1.jpg",
+    gallery: ["/sunlit-room-3.jpg", "/sunlit-balcony.jpg", "/sunlit-room-2.jpg", "/sunlit-bathroom-1.jpg", "/sunlit-bathroom-2.jpg"],
+    videoUrl: "/sunlit-room-tour.mp4",
+    description: "A breathtaking intersection of comfort and the outdoors. The Sunlit Studio earns its name from the magnificent natural sunlight that floods through its large glass doors. Enjoy your morning coffee on the private balcony, or relax in the deep green velvet seating while the golden hour illuminates your suite.",
     amenities: ["Floor-to-Ceiling Windows", "Ground Floor Access", "Sitting Area", "Natural Light", "Rain Shower", "Smart TV"],
   },
 ];
@@ -50,6 +53,7 @@ interface Room {
   amenities: string[];
   heroImage: string;
   gallery: string[];
+  videoUrl?: string | null;
 }
 
 export default function RoomPage() {
@@ -301,12 +305,13 @@ export default function RoomPage() {
       )}
 
       {/* GALLERY PREVIEW + MODAL */}
-      {room.gallery && room.gallery.length > 0 && (
+      {room.gallery && room.gallery.length > 0 && (() => {
+        const totalItems = room.gallery.length + (room.videoUrl ? 1 : 0);
+        return (
         <div className="w-full bg-stone-900 py-24">
           <div className="max-w-6xl mx-auto px-6">
             <h3 className="font-serif font-bold text-2xl mb-12 text-stone-100">Closer Look</h3>
 
-            {/* 3-Image Preview Layout */}
             <div className="grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr] gap-5 w-full">
               {room.gallery[0] && (
                 <div
@@ -349,10 +354,9 @@ export default function RoomPage() {
                       className="object-cover block rounded-lg"
                     />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg" />
-                    {/* View More overlay if more than 3 images */}
-                    {room.gallery.length > 3 && (
+                    {totalItems > 3 && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
-                        <span className="text-white text-lg font-bold">+{room.gallery.length - 3} more</span>
+                        <span className="text-white text-lg font-bold">+{totalItems - 3} more</span>
                       </div>
                     )}
                   </div>
@@ -360,25 +364,27 @@ export default function RoomPage() {
               </div>
             </div>
 
-            {/* View More Button */}
-            {room.gallery.length > 3 && (
+            {totalItems > 3 && (
               <div className="mt-8 text-center">
                 <button
                   onClick={() => { setCurrentSlide(0); setIsGalleryOpen(true); }}
                   className="px-8 py-3 bg-saffron hover:bg-saffron/90 text-stone-900 font-bold text-sm uppercase tracking-wider rounded-lg transition-colors"
                 >
-                  View All {room.gallery.length} Photos
+                  View All {totalItems} Photos{room.videoUrl ? ' & Tour' : ''}
                 </button>
               </div>
             )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* FULLSCREEN GALLERY MODAL */}
-      {isGalleryOpen && room.gallery && (
+      {isGalleryOpen && room.gallery && (() => {
+        const totalItems = room.gallery.length + (room.videoUrl ? 1 : 0);
+        const isVideoSlide = room.videoUrl && currentSlide === room.gallery.length;
+        return (
         <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center">
-          {/* Close Button */}
           <button
             onClick={() => setIsGalleryOpen(false)}
             className="absolute top-4 right-4 md:top-8 md:right-8 text-white/80 hover:text-white p-2 z-10"
@@ -387,40 +393,44 @@ export default function RoomPage() {
             <X size={32} />
           </button>
 
-          {/* Image Counter */}
           <div className="absolute top-4 left-4 md:top-8 md:left-8 text-white/80 text-sm font-medium">
-            {currentSlide + 1} / {room.gallery.length}
+            {currentSlide + 1} / {totalItems}
           </div>
 
-          {/* Arrow Left */}
           <button
-            onClick={() => setCurrentSlide((prev) => (prev === 0 ? room.gallery.length - 1 : prev - 1))}
+            onClick={() => setCurrentSlide((prev) => (prev === 0 ? totalItems - 1 : prev - 1))}
             className="absolute left-2 md:left-8 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-2 z-10"
             aria-label="Previous image"
           >
             <ChevronLeft size={48} />
           </button>
 
-          {/* Current Image */}
           <div className="w-full h-full flex items-center justify-center p-4 md:p-20 relative">
-            <Image
-              src={room.gallery[currentSlide]}
-              alt={`Room view ${currentSlide + 1}`}
-              fill
-              className="object-contain"
-            />
+            {isVideoSlide ? (
+              <video
+                src={room.videoUrl!}
+                controls
+                autoPlay
+                className="max-w-full max-h-full rounded-lg"
+              />
+            ) : (
+              <Image
+                src={room.gallery[currentSlide]}
+                alt={`Room view ${currentSlide + 1}`}
+                fill
+                className="object-contain"
+              />
+            )}
           </div>
 
-          {/* Arrow Right */}
           <button
-            onClick={() => setCurrentSlide((prev) => (prev === room.gallery.length - 1 ? 0 : prev + 1))}
+            onClick={() => setCurrentSlide((prev) => (prev === totalItems - 1 ? 0 : prev + 1))}
             className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-2 z-10"
             aria-label="Next image"
           >
             <ChevronRight size={48} />
           </button>
 
-          {/* Thumbnail Strip */}
           <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 flex gap-2 max-w-[90vw] overflow-x-auto py-2 px-4">
             {room.gallery.map((img, index) => (
               <button
@@ -432,9 +442,19 @@ export default function RoomPage() {
                 <Image src={img} alt="" fill className="object-cover" />
               </button>
             ))}
+            {room.videoUrl && (
+              <button
+                onClick={() => setCurrentSlide(room.gallery.length)}
+                className={`relative flex-shrink-0 w-16 h-12 md:w-20 md:h-14 rounded overflow-hidden border-2 transition-all flex items-center justify-center bg-stone-800 ${currentSlide === room.gallery.length ? 'border-saffron' : 'border-transparent opacity-50 hover:opacity-100'
+                  }`}
+              >
+                <span className="text-white text-[8px] font-bold uppercase tracking-wider">Tour</span>
+              </button>
+            )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* REVIEWS SECTION */}
       <div className="bg-stone-50 py-24">

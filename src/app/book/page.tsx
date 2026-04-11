@@ -14,9 +14,9 @@ import { useBookings } from "@/context/BookingContext"; // Import Context
 import { useAuth } from "@/context/AuthContext";
 
 const ROOMS = [
-  { id: "skyline-haven", name: "Skyline Haven", price: 8500, image: "/skyline-main.jpg" },
-  { id: "zen-nest", name: "Zen Nest", price: 6500, image: "/zen-main.jpg" },
-  { id: "sunlit-studio", name: "Sunlit Studio", price: 7200, image: "/sunlit-main.jpg" },
+  { id: "skyline-haven", name: "Skyline Haven", price1: 2599, price2: 3199, image: "/skyline-room-1.jpg" },
+  { id: "zen-nest", name: "Zen Nest", price1: 1599, price2: 1999, image: "/zen-room-1.jpg" },
+  { id: "sunlit-studio", name: "Sunlit Studio", price1: 2199, price2: 2599, image: "/sunlit-room-1.jpg" },
 ];
 
 const PACKAGES = [
@@ -282,7 +282,8 @@ const calculateTotal = () => {
     const end = new Date(checkOut);
     const diffTime = end.getTime() - start.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 ? diffDays * selectedRoom.price : 0;
+    const nightPrice = guests === 1 ? selectedRoom.price1 : selectedRoom.price2;
+    return diffDays > 0 ? diffDays * nightPrice : 0;
   };
 
   const calculateAddOnsTotal = () => {
@@ -310,7 +311,8 @@ const calculateTotal = () => {
   const packageTotal = selectedPackageData?.price ?? 0;
   const taxes = Math.round((basePrice + addOnsTotal + packageTotal) * 0.12);
   const grandTotal = basePrice + addOnsTotal + packageTotal + taxes;
-  const nights = total / selectedRoom.price || 0;
+  const nightPrice = guests === 1 ? selectedRoom.price1 : selectedRoom.price2;
+  const nights = nightPrice > 0 ? total / nightPrice : 0;
 
   // VALIDATION
   const isDateValid = checkIn !== "" && checkOut !== "" && nights > 0;
@@ -617,7 +619,7 @@ setInvoiceData({
                         }`}
                     >
                       <div className="font-serif text-lg text-stone-900">{room.name}</div>
-                      <div className="text-xs text-stone-500 mt-1">₹{room.price.toLocaleString()} / night</div>
+                      <div className="text-xs text-stone-500 mt-1">₹{(guests === 1 ? room.price1 : room.price2).toLocaleString()} / night</div>
                       {selectedRoomId === room.id && <Check className="w-4 h-4 text-saffron mt-2" />}
                     </button>
                   ))}
