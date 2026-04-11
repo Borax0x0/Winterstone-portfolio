@@ -15,17 +15,17 @@ const rooms = [
   },
   {
     id: 2,
-    name: "Zen Nest",
-    slug: "zen-nest",
-    image: "/zen-room-1.jpg",
-    desc: "A sanctuary designed for yoga, meditation, and stillness.",
-  },
-  {
-    id: 3,
     name: "Sunlit Studio",
     slug: "sunlit-studio",
     image: "/sunlit-room-1.jpg",
     desc: "Bright, airy ground-floor rooms with expansive windows.",
+  },
+  {
+    id: 3,
+    name: "Zen Nest",
+    slug: "zen-nest",
+    image: "/zen-room-1.jpg",
+    desc: "A sanctuary designed for yoga, meditation, and stillness.",
   },
 ];
 
