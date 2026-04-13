@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface HeroSlideshowProps {
     images: string[];
@@ -26,6 +27,12 @@ export default function HeroSlideshow({
     const nextSlide = useCallback(() => {
         if (slideImages.length <= 1) return;
         setCurrentIndex((prev) => (prev + 1) % slideImages.length);
+        setProgress(0);
+    }, [slideImages.length]);
+
+    const prevSlide = useCallback(() => {
+        if (slideImages.length <= 1) return;
+        setCurrentIndex((prev) => (prev === 0 ? slideImages.length - 1 : prev - 1));
         setProgress(0);
     }, [slideImages.length]);
 
@@ -75,6 +82,26 @@ export default function HeroSlideshow({
 
             {/* Dark Overlay */}
             <div className="absolute inset-0 bg-black/30" />
+
+            {/* Navigation Buttons */}
+            {slideImages.length > 1 && (
+                <>
+                    <button
+                        onClick={prevSlide}
+                        className="absolute left-6 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:text-saffron hover:border-saffron transition-all z-20"
+                        aria-label="Previous slide"
+                    >
+                        <ChevronLeft size={32} />
+                    </button>
+                    <button
+                        onClick={nextSlide}
+                        className="absolute right-6 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:text-saffron hover:border-saffron transition-all z-20"
+                        aria-label="Next slide"
+                    >
+                        <ChevronRight size={32} />
+                    </button>
+                </>
+            )}
 
             {/* Content Overlay */}
             <div className="absolute bottom-12 left-6 md:left-12 text-white z-10">

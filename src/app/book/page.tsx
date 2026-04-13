@@ -605,6 +605,51 @@ setInvoiceData({
 
             <div className="bg-white p-8 rounded-sm shadow-xl border border-stone-800 space-y-8">
 
+              {/* 0. PACKAGES */}
+              <div>
+                <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-1 flex items-center gap-2">
+                  <Mountain className="w-4 h-4 text-saffron" />
+                  Packages &amp; Experiences
+                </label>
+                <p className="text-[11px] text-stone-400 mb-3">Optional — add a curated mountain experience to your stay.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {PACKAGES.map((pkg) => (
+                    <button
+                      key={pkg.id}
+                      type="button"
+                      onClick={() => setSelectedPackage(selectedPackage === pkg.id ? null : pkg.id)}
+                      className={`p-4 border text-left transition-all ${
+                        selectedPackage === pkg.id
+                          ? "border-saffron bg-saffron/5 ring-1 ring-saffron"
+                          : "border-stone-200 hover:border-stone-400"
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <div className="font-medium text-stone-900">{pkg.name}</div>
+                          <div className="text-[11px] text-stone-400 mt-0.5">{pkg.tagline}</div>
+                        </div>
+                        <div className="text-sm font-bold text-saffron shrink-0 ml-2">₹{pkg.price.toLocaleString()}</div>
+                      </div>
+                      <ul className="space-y-1 mt-2">
+                        {pkg.inclusions.map((item, i) => (
+                          <li key={i} className="flex items-center gap-1.5 text-xs text-stone-500">
+                            <Check className="w-3 h-3 text-saffron shrink-0" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                      {selectedPackage === pkg.id && (
+                        <div className="mt-2 pt-2 border-t border-saffron/20 flex items-center gap-1 text-xs text-saffron font-semibold">
+                          <Check className="w-3 h-3" /> Added to your stay
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-stone-400 mt-2 ml-1">* Trek dates are coordinated by the lodge upon arrival. Package price is added to your total.</p>
+              </div>
+
               {/* 1. ROOMS */}
               <div>
                 <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">Select Suite</label>
@@ -842,51 +887,6 @@ setInvoiceData({
                   </div>
                 </div>
                 <p className="text-[10px] text-stone-400 mt-2 ml-1">* Special requests are subject to availability and may incur additional charges.</p>
-              </div>
-
-              {/* 5. PACKAGES */}
-              <div>
-                <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-1 flex items-center gap-2">
-                  <Mountain className="w-4 h-4 text-saffron" />
-                  Packages &amp; Experiences
-                </label>
-                <p className="text-[11px] text-stone-400 mb-3">Optional — add a curated mountain experience to your stay.</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {PACKAGES.map((pkg) => (
-                    <button
-                      key={pkg.id}
-                      type="button"
-                      onClick={() => setSelectedPackage(selectedPackage === pkg.id ? null : pkg.id)}
-                      className={`p-4 border text-left transition-all ${
-                        selectedPackage === pkg.id
-                          ? "border-saffron bg-saffron/5 ring-1 ring-saffron"
-                          : "border-stone-200 hover:border-stone-400"
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <div className="font-medium text-stone-900">{pkg.name}</div>
-                          <div className="text-[11px] text-stone-400 mt-0.5">{pkg.tagline}</div>
-                        </div>
-                        <div className="text-sm font-bold text-saffron shrink-0 ml-2">₹{pkg.price.toLocaleString()}</div>
-                      </div>
-                      <ul className="space-y-1 mt-2">
-                        {pkg.inclusions.map((item, i) => (
-                          <li key={i} className="flex items-center gap-1.5 text-xs text-stone-500">
-                            <Check className="w-3 h-3 text-saffron shrink-0" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                      {selectedPackage === pkg.id && (
-                        <div className="mt-2 pt-2 border-t border-saffron/20 flex items-center gap-1 text-xs text-saffron font-semibold">
-                          <Check className="w-3 h-3" /> Added to your stay
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[10px] text-stone-400 mt-2 ml-1">* Trek dates are coordinated by the lodge upon arrival. Package price is added to your total.</p>
               </div>
 
             </div>

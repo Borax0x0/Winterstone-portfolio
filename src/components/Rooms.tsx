@@ -17,14 +17,14 @@ const rooms = [
     id: 2,
     name: "Sunlit Studio",
     slug: "sunlit-studio",
-    image: "/sunlit-room-1.jpg",
-    desc: "Bright, airy ground-floor rooms with expansive windows.",
+    image: "/zen-room-1.jpg",
+    desc: "Bright, airy rooms with expansive windows.",
   },
   {
     id: 3,
     name: "Zen Nest",
     slug: "zen-nest",
-    image: "/zen-room-1.jpg",
+    image: "/sunlit-room-2.jpg",
     desc: "A sanctuary designed for yoga, meditation, and stillness.",
   },
 ];
@@ -65,8 +65,8 @@ const Rooms = () => {
                 <h3 className="text-2xl font-serif font-bold mb-2">{room.name}</h3>
                 <p className="text-sm text-white/60 tracking-wide uppercase max-w-xs">{room.desc}</p>
               </div>
-              
-              <Link 
+
+              <Link
                 href={`/rooms/${room.slug}`}
                 className="text-xs font-bold uppercase tracking-widest text-saffron border-b border-saffron pb-1 hover:text-white hover:border-white transition-colors"
               >
