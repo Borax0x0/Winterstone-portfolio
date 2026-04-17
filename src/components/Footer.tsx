@@ -6,6 +6,7 @@ import { MapPin, Phone, Mail, Instagram, ExternalLink, ChevronDown } from "lucid
 import WeatherWidget from "./WeatherWidget";
 import NewsletterForm from "./NewsletterForm";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePathname } from "next/navigation";
 
 // Collapsible Section Component for Mobile
 function CollapsibleSection({

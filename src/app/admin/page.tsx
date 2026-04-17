@@ -1,23 +1,70 @@
 "use client";
 
-import React from 'react';
-import { TrendingUp, Calendar, DollarSign, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { TrendingUp, Calendar, DollarSign, Users, Loader2 } from 'lucide-react';
 import RevenueChart from '@/components/admin/RevenueChart';
 import BookingsChart from '@/components/admin/BookingsChart';
 import RoomPieChart from '@/components/admin/RoomPieChart';
 
-// Dummy stats - replace with real data before release
-const stats = {
-    totalBookings: 185,
-    totalRevenue: 540000,
-    occupancyRate: 72,
-    pendingBookings: 12,
-};
+interface DashboardStats {
+    totalBookings: number;
+    totalRevenue: number;
+    occupancyRate: number;
+    pendingBookings: number;
+}
+
+interface MonthData {
+    month: string;
+    revenue?: number;
+    bookings?: number;
+}
+
+interface RoomData {
+    name: string;
+    value: number;
+    color: string;
+}
+
+interface DashboardData {
+    stats: DashboardStats;
+    revenueByMonth: MonthData[];
+    bookingsByMonth: MonthData[];
+    revenueByRoom: RoomData[];
+}
 
 export default function AdminDashboard() {
+    const [data, setData] = useState<DashboardData | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await fetch('/api/admin/stats');
+                if (res.ok) {
+                    const json = await res.json();
+                    setData(json);
+                }
+            } catch (error) {
+                console.error('Failed to fetch dashboard stats:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchStats();
+    }, []);
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 animate-spin text-stone-400" />
+            </div>
+        );
+    }
+
+    const stats = data?.stats || { totalBookings: 0, totalRevenue: 0, occupancyRate: 0, pendingBookings: 0 };
+
     return (
         <div>
-            <h1 className="text-3xl font-serif font-bold text-white mb-8">Dashboard Overview</h1>
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -80,15 +127,15 @@ export default function AdminDashboard() {
 
             {/* Charts Row 1 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <RevenueChart />
-                <BookingsChart />
+                <RevenueChart data={data?.revenueByMonth || []} />
+                <BookingsChart data={data?.bookingsByMonth || []} />
             </div>
 
             {/* Charts Row 2 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <RoomPieChart />
+                <RoomPieChart data={data?.revenueByRoom || []} />
 
-                {/* Quick Actions or Recent Activity placeholder */}
+                {/* Quick Actions */}
                 <div className="bg-stone-900 border border-stone-700 rounded-lg p-6">
                     <h3 className="text-sm font-bold text-stone-400 uppercase tracking-widest mb-4">
                         Quick Actions

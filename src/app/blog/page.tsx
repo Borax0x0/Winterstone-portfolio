@@ -211,7 +211,7 @@ export default function BlogPage() {
                 We organize intimate events designed to connect you with the landscape and fellow travelers.
               </p>
               {/* ADMIN: Add Event Button */}
-              {user?.role === "admin" && (
+              {(user?.role === "admin" || user?.role === "superadmin") && (
                 <button
                   onClick={() => openModal("add")}
                   className="bg-saffron text-stone-900 px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-white transition-colors flex items-center gap-2"
@@ -251,7 +251,7 @@ export default function BlogPage() {
                     />
 
                     {/* ADMIN ACTIONS OVERLAY */}
-                    {user?.role === "admin" && (
+                    {(user?.role === "admin" || user?.role === "superadmin") && (
                       <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                         <button
                           onClick={(e) => { e.stopPropagation(); openModal("edit", event); }}
@@ -321,7 +321,7 @@ export default function BlogPage() {
                   />
 
                   {/* ADMIN ACTIONS OVERLAY (For Past Events too) */}
-                  {user?.role === "admin" && (
+                  {(user?.role === "admin" || user?.role === "superadmin") && (
                     <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                       <button
                         onClick={(e) => { e.stopPropagation(); openModal("edit", event); }}

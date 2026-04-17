@@ -66,7 +66,7 @@ export default function Navbar() {
       />
 
       <nav
-        className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${isScrolled
+        className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${isScrolled || pathname === "/privacy-policy" || pathname === "/terms" || pathname?.startsWith("/admin")
           ? "bg-[#1a2e26] py-4 shadow-md"
           : "bg-transparent py-6"
           }`}

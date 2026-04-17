@@ -266,6 +266,7 @@ export default function BookingsPage() {
                     <table className="w-full">
                         <thead className="bg-stone-50 border-b border-stone-200">
                             <tr>
+                                <th className="px-4 py-4 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">#</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">Booking ID</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">Guest</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">Room</th>
@@ -279,7 +280,7 @@ export default function BookingsPage() {
                         <tbody className="divide-y divide-stone-100">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-12 text-center text-stone-500">
+                                    <td colSpan={9} className="px-6 py-12 text-center text-stone-500">
                                         <div className="flex justify-center items-center gap-3">
                                             <div className="animate-spin h-5 w-5 border-2 border-saffron border-t-transparent rounded-full"></div>
                                             Loading Bookings...
@@ -287,8 +288,11 @@ export default function BookingsPage() {
                                     </td>
                                 </tr>
                             ) : filteredBookings.length > 0 ? (
-                                filteredBookings.map((booking) => (
+                                filteredBookings.map((booking, index) => (
                                     <tr key={booking._id || booking.id} className="hover:bg-stone-50/50 transition-colors">
+                                        <td className="px-4 py-4 text-xs font-bold text-stone-400 tabular-nums">
+                                            {index + 1}
+                                        </td>
                                         <td className="px-6 py-4 text-xs font-mono font-bold text-stone-600">
                                             {booking._id ? booking._id.slice(-6).toUpperCase() : booking.id}
                                         </td>
