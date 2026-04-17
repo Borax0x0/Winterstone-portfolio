@@ -152,8 +152,8 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-6 mt-8 pt-6 border-t border-stone-900 flex flex-col md:flex-row justify-between items-center text-[10px] uppercase tracking-widest opacity-40">
         <p>© 2026 Winterstone Lodge. All Rights Reserved.</p>
         <div className="flex gap-6 mt-4 md:mt-0">
-          <Link href="#" className="hover:text-white py-2">Privacy</Link>
-          <Link href="#" className="hover:text-white py-2">Terms</Link>
+          <Link href="/privacy-policy" className="hover:text-white py-2">Privacy</Link>
+          <Link href="/terms" className="hover:text-white py-2">Terms</Link>
           <Link href="#" className="hover:text-white py-2">Sitemap</Link>
         </div>
       </div>
