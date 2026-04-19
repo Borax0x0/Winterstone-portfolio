@@ -15,8 +15,8 @@ interface DashboardStats {
 
 interface MonthData {
     month: string;
-    revenue?: number;
-    bookings?: number;
+    revenue: number;
+    bookings: number;
 }
 
 interface RoomData {
