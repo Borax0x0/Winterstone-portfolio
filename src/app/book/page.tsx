@@ -169,12 +169,25 @@ function BookingContent() {
     fetchAddOns();
   }, []);
 
-  // LOAD URL PARAMS (room, checkin, checkout from AvailabilityModal)
+  // LOAD URL PARAMS (room, checkin, checkout from AvailabilityModal, payment callbacks)
   useEffect(() => {
     const roomParam = searchParams.get("room");
     const checkinParam = searchParams.get("checkin");
     const checkoutParam = searchParams.get("checkout");
     const unitParam = searchParams.get("unit"); // Added unit
+    
+    // Callback redirect handling
+    const paymentParam = searchParams.get("payment");
+    const orderIdParam = searchParams.get("orderId");
+
+    if (paymentParam === "success" && orderIdParam) {
+      setIsSuccess(true);
+      alert(`Booking Confirmed! (Order: ${orderIdParam}). We've sent a detailed receipt to your email.`);
+    } else if (paymentParam === "failed") {
+      alert("Payment failed or was cancelled.");
+    } else if (paymentParam === "error") {
+      alert("There was an error verifying the payment. Please contact support.");
+    }
 
     if (roomParam) {
       const exists = ROOMS.find(r => r.id === roomParam);
@@ -337,91 +350,16 @@ const calculateTotal = () => {
     setIsProcessing(true);
 
     try {
-      // Guest checkout — no verification required
-      // 1. Create Order
+      // 1. Create Razorpay Order first (server-side)
       const order = await initiatePayment(grandTotal, "INR");
       console.log("Order Created:", order);
 
-      // 2. Mock Logic (No Keys)
-      if (order.mock) {
-        console.log("Mock Payment Mode Active");
-        // Simulate processing delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        // Simulate Success directly
-        await verifyPayment({
-          razorpay_order_id: order.id,
-          razorpay_payment_id: "mock_payment_" + Math.random().toString(36).substring(7),
-          razorpay_signature: "mock_signature",
-          mock: true
-        });
-        return;
-      }
-
-      // 3. Real Razorpay Logic
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: order.amount,
-        currency: order.currency,
-        name: "Winterstone Luxury",
-        description: `Booking for ${selectedRoom.name}`,
-        order_id: order.id,
-        handler: async function (response: RazorpayPaymentResponse) {
-          console.log("Payment Successful", response);
-          await verifyPayment({
-            ...response,
-            mock: false
-          });
-        },
-        prefill: {
-          name: name,
-          email: email,
-          contact: phone
-        },
-        theme: {
-          color: "#D4AF37" // Saffron gold
-        }
-      };
-
-      const rzp1 = new (window as unknown as { Razorpay: new (options: object) => { open: () => void; on: (event: string, handler: (response: RazorpayFailedResponse) => void) => void } }).Razorpay(options);
-      rzp1.open();
-      rzp1.on('payment.failed', function (response: RazorpayFailedResponse) {
-        alert("Payment Failed: " + response.error.description);
-        setIsProcessing(false);
-      });
-
-    } catch (error) {
-      console.error("Payment Error:", error);
-      alert("Could not initiate payment. Please try again.");
-      setIsProcessing(false);
-    }
-  };
-
-  // --- STEP 2: VERIFY & FINALIZE ---
-  const verifyPayment = async (paymentDetails: PaymentDetails) => {
-    try {
-      // 1. Save Booking Pending Verification
-      // Actually, we can save AFTER verification for simplicity, OR verify creates the record?
-      // Let's assume we save the booking record via API verify call?
-      // Or simpler: We create the booking *first*?
-      // For now, let's verify via the API we made. The API expects a bookingId to update.
-      // But we haven't created the booking in DB yet!
-      // Wait, the API verify route does `Booking.findByIdAndUpdate`. It expects the booking to exist.
-      // FIX: We need to creating the Booking in "Pending" state BEFORE creating the order ideally.
-      // OR, simpler for this phase:
-      // 1. Create Booking (Pending) -> MongoDB
-      // 2. Create Order
-      // 3. Pay
-      // 4. Verify & Update Booking (Paid)
-
-      // Let's modify the flow slightly:
-      // A. Create Pending Booking locally/via API
-      // Combine selected requests and custom request
+      // 2. Build the pending booking record
       const finalRequests = [...specialRequests];
       if (customRequest.trim()) {
         finalRequests.push(`Other: ${customRequest.trim()}`);
       }
-
-const newBooking = {
+      const newBooking = {
         guestName: name,
         email,
         roomName: selectedRoom.name,
@@ -435,36 +373,93 @@ const newBooking = {
         status: "Pending" as const,
         specialRequests: finalRequests,
         assignedUnit: assignedUnit || undefined,
+        // Store razorpayOrderId now so the webhook can find this booking
+        // even if the client-side handler never fires
+        razorpayOrderId: order.id,
       };
 
-      // Use Context to Add (This generates a POST to /api/bookings)
-      // We need the ID back from this! addBooking in context returns void currently.
-      // We might need to call fetch directly here to get the ID.
-
+      // 3. Save the Pending booking to DB before opening Razorpay
       const bookingRes = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newBooking),
       });
-
       if (!bookingRes.ok) throw new Error("Failed to create booking record");
       const savedBooking = await bookingRes.json();
-      console.log("Booking Record Created:", savedBooking);
+      const bookingId: string = savedBooking._id || savedBooking.id;
+      console.log("Booking Record Created (Pending):", bookingId);
 
-      // Now verify using this ID
+      // 4. Mock mode (no Razorpay keys) — auto-verify
+      if (order.mock) {
+        console.log("Mock Payment Mode Active");
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        await verifyPayment({
+          razorpay_order_id: order.id,
+          razorpay_payment_id: "mock_payment_" + Math.random().toString(36).substring(7),
+          razorpay_signature: "mock_signature",
+          mock: true,
+        }, bookingId);
+        return;
+      }
+
+      // 5. Real Razorpay Checkout
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: "Winterstone Lodge",
+        description: `Booking for ${selectedRoom.name}`,
+        order_id: order.id,
+        handler: async function (response: RazorpayPaymentResponse) {
+          console.log("Payment Successful", response);
+          await verifyPayment({ ...response, mock: false }, bookingId);
+        },
+        prefill: {
+          name: name,
+          email: email,
+          contact: `+91${phone}`,
+        },
+        theme: { color: "#D4AF37" },
+        callback_url: "/api/payments/callback",
+        modal: {
+          ondismiss: function () {
+            // User closed the modal without paying — reset processing state
+            console.log("Razorpay modal dismissed");
+            setIsProcessing(false);
+          },
+        },
+      };
+
+      const rzpCtor = (window as unknown as { Razorpay: new (options: object) => { open: () => void; on: (event: string, handler: (response: RazorpayFailedResponse) => void) => void } }).Razorpay;
+      const rzp1 = new rzpCtor(options);
+      rzp1.open();
+      rzp1.on('payment.failed', function (response: RazorpayFailedResponse) {
+        console.error("Payment Failed:", response.error);
+        alert("Payment Failed: " + response.error.description);
+        setIsProcessing(false);
+      });
+
+    } catch (error) {
+      console.error("Payment Error:", error);
+      alert("Could not initiate payment. Please try again.");
+      setIsProcessing(false);
+    }
+  };
+
+  // --- STEP 2: VERIFY & FINALIZE ---
+  // bookingId is now passed in from handlePayment (booking was created before modal opened)
+  const verifyPayment = async (paymentDetails: PaymentDetails, bookingId: string) => {
+    try {
       const verifyRes = await fetch('/api/payments/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...paymentDetails,
-          bookingId: savedBooking._id || savedBooking.id
-        }),
+        body: JSON.stringify({ ...paymentDetails, bookingId }),
       });
 
       if (!verifyRes.ok) throw new Error("Payment Verification Failed");
 
-      // Success!
-      await finalizeEmail(savedBooking._id || savedBooking.id); // Send Email
+      // Success — send confirmation email
+      await finalizeEmail(bookingId);
 
     } catch (error) {
       console.error("Verification Error:", error);
