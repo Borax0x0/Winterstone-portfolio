@@ -42,6 +42,9 @@ interface BookingContextType {
     deleteBooking: (id: string) => Promise<void>;
     initiatePayment: (amount: number, currency?: string) => Promise<PaymentOrder>;
     refreshBookings: () => Promise<void>;
+    page: number;
+    totalPages: number;
+    setPage: (page: number) => void;
 }
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
@@ -49,15 +52,23 @@ const BookingContext = createContext<BookingContextType | undefined>(undefined);
 export function BookingProvider({ children }: { children: React.ReactNode }) {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
     // Fetch Bookings
     const fetchBookings = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch('/api/bookings');
+            const res = await fetch(`/api/bookings?page=${page}&limit=50`);
             if (res.ok) {
                 const data = await res.json();
-                setBookings(data);
+                if (Array.isArray(data)) {
+                    setBookings(data);
+                } else {
+                    setBookings(data.bookings);
+                    setTotalPages(data.totalPages);
+                    setPage(data.page);
+                }
             }
         } catch (error) {
             console.error("Failed to fetch bookings", error);
@@ -68,7 +79,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         fetchBookings();
-    }, []);
+    }, [page]);
 
     const addBooking = async (newBooking: Omit<Booking, "_id" | "id">) => {
         try {
@@ -136,7 +147,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <BookingContext.Provider value={{ bookings, isLoading, addBooking, updateBookingStatus, deleteBooking, initiatePayment, refreshBookings: fetchBookings }}>
+        <BookingContext.Provider value={{ bookings, isLoading, addBooking, updateBookingStatus, deleteBooking, initiatePayment, refreshBookings: fetchBookings, page, totalPages, setPage }}>
             {children}
         </BookingContext.Provider>
     );

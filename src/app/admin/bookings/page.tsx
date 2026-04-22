@@ -46,7 +46,7 @@ function SourceBadge({ source }: { source?: string }) {
 }
 
 export default function BookingsPage() {
-    const { bookings, updateBookingStatus, isLoading, refreshBookings } = useBookings();
+    const { bookings, updateBookingStatus, isLoading, refreshBookings, page, totalPages, setPage } = useBookings();
     
     // Core Filters
     const [filterStatus, setFilterStatus] = useState<BookingStatus | "All">("All");
@@ -367,12 +367,37 @@ export default function BookingsPage() {
                     </table>
                 </div>
 
-                {/* PAGINATION (Static for now) */}
-                <div className="px-6 py-4 border-t border-stone-200 flex items-center justify-between text-xs text-stone-500">
-                    <span>Showing {filteredBookings.length} results</span>
-                    <div className="flex gap-2">
-                        <button disabled className="px-3 py-1 border rounded opacity-50 cursor-not-allowed">Previous</button>
-                        <button disabled className="px-3 py-1 border rounded opacity-50 cursor-not-allowed">Next</button>
+                {/* PAGINATION */}
+                <div className="px-6 py-4 border-t border-stone-200 flex flex-col sm:flex-row gap-4 items-center justify-between text-xs text-stone-500">
+                    <span>Showing {filteredBookings.length} results • Page {page} of {totalPages}</span>
+                    <div className="flex gap-1 items-center">
+                        <button 
+                            onClick={() => setPage(page - 1)} 
+                            disabled={page === 1} 
+                            className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stone-50 transition-colors"
+                        >
+                            Previous
+                        </button>
+                        
+                        <div className="hidden sm:flex gap-1">
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                                <button
+                                    key={pageNum}
+                                    onClick={() => setPage(pageNum)}
+                                    className={`px-3 py-1 border rounded transition-colors ${page === pageNum ? 'bg-stone-900 text-white border-stone-900' : 'hover:bg-stone-50'}`}
+                                >
+                                    {pageNum}
+                                </button>
+                            ))}
+                        </div>
+
+                        <button 
+                            onClick={() => setPage(page + 1)} 
+                            disabled={page >= totalPages} 
+                            className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stone-50 transition-colors"
+                        >
+                            Next
+                        </button>
                     </div>
                 </div>
             </div>

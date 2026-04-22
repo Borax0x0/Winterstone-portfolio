@@ -6,16 +6,23 @@ import { motion, AnimatePresence } from "framer-motion";
 import { User, Lock, ArrowRight, Loader2, AlertCircle, X, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { signIn } from "next-auth/react";
 
+type AuthMode = "signin" | "signup" | "forgot-password";
+
 interface AuthModalProps {
     isOpen: boolean;
     onClose: () => void;
+    defaultMode?: AuthMode;
 }
 
-type AuthMode = "signin" | "signup" | "forgot-password";
-
-export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) {
     const { login } = useAuth();
-    const [authMode, setAuthMode] = useState<AuthMode>("signin");
+    const [authMode, setAuthMode] = useState<AuthMode>(defaultMode);
+
+    React.useEffect(() => {
+        if (isOpen) {
+            setAuthMode(defaultMode);
+        }
+    }, [isOpen, defaultMode]);
 
     // Form States
     const [email, setEmail] = useState("");
@@ -38,7 +45,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
     const handleClose = () => {
         resetForm();
-        setAuthMode("signin");
+        setAuthMode(defaultMode);
         onClose();
     };
 

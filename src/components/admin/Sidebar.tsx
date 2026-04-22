@@ -9,7 +9,6 @@ import { motion, AnimatePresence } from "framer-motion";
 const navItems = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Bookings", href: "/admin/bookings", icon: BookKey },
-    { name: "Rooms", href: "/admin/rooms", icon: BedDouble },
     { name: "Add-Ons", href: "/admin/addons", icon: Sparkles },
     { name: "Reviews", href: "/admin/reviews", icon: MessageSquare },
     { name: "Team", href: "/admin/team", icon: Users },

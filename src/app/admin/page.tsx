@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Calendar, DollarSign, Users, Loader2 } from 'lucide-react';
+import { TrendingUp, Calendar, IndianRupee, Users, Loader2 } from 'lucide-react';
 import RevenueChart from '@/components/admin/RevenueChart';
 import BookingsChart from '@/components/admin/BookingsChart';
 import RoomPieChart from '@/components/admin/RoomPieChart';
@@ -39,7 +39,7 @@ export default function AdminDashboard() {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const res = await fetch('/api/admin/stats');
+                const res = await fetch('/api/admin/stats', { cache: 'no-store' });
                 if (res.ok) {
                     const json = await res.json();
                     setData(json);
@@ -89,10 +89,10 @@ export default function AdminDashboard() {
                                 Revenue
                             </h3>
                             <p className="text-3xl font-serif text-white mt-2">
-                                ₹{(stats.totalRevenue / 1000).toFixed(0)}K
+                                ₹{Math.round(stats.totalRevenue).toLocaleString()}
                             </p>
                         </div>
-                        <DollarSign className="w-10 h-10 text-amber-500/50" />
+                        <IndianRupee className="w-10 h-10 text-amber-500/50" />
                     </div>
                 </div>
 

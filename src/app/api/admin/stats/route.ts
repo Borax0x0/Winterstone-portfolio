@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { auth } from '@/auth';
 import dbConnect from '@/lib/db';
 import Booking from '@/models/Booking';
@@ -15,19 +18,20 @@ export async function GET() {
 
         await dbConnect();
 
-        const bookings = await Booking.find({ status: { $ne: 'Cancelled' } }).lean();
+        const allBookings = await Booking.find({}).lean();
+        const activeBookings = allBookings.filter(b => b.status !== 'Cancelled');
 
         // --- Stats ---
-        const totalBookings = bookings.length;
-        const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
-        const pendingBookings = bookings.filter(b => b.status === 'Pending').length;
+        const totalBookings = allBookings.length;
+        const totalRevenue = activeBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+        const pendingBookings = allBookings.filter(b => b.status === 'Pending').length;
 
-        // Occupancy: bookings with checkIn today or in the future, as a rough percentage
+        // Occupancy: bookings that are actively checked-in today
         const today = new Date().toISOString().split('T')[0];
-        const activeBookings = bookings.filter(b => b.checkOut >= today).length;
-        // Rough occupancy based on 3 rooms (adjust if room count changes)
+        const occupiedToday = activeBookings.filter(b => b.checkIn <= today && b.checkOut > today).length;
+        // Rough occupancy based on 3 rooms
         const totalRoomSlots = 3;
-        const occupancyRate = totalRoomSlots > 0 ? Math.min(100, Math.round((activeBookings / totalRoomSlots) * 100)) : 0;
+        const occupancyRate = totalRoomSlots > 0 ? Math.min(100, Math.round((occupiedToday / totalRoomSlots) * 100)) : 0;
 
         // --- Revenue by month (last 6 months) ---
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -40,12 +44,14 @@ export async function GET() {
             const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
             const label = monthNames[d.getMonth()];
 
-            const monthBookings = bookings.filter(b => {
+            const monthBookings = allBookings.filter(b => {
                 const created = new Date(b.createdAt);
                 return created.getFullYear() === d.getFullYear() && created.getMonth() === d.getMonth();
             });
 
-            revenueByMonth.push({ month: label, revenue: monthBookings.reduce((s, b) => s + (b.totalAmount || 0), 0) });
+            const activeMonthBookings = monthBookings.filter(b => b.status !== 'Cancelled');
+
+            revenueByMonth.push({ month: label, revenue: activeMonthBookings.reduce((s, b) => s + (b.totalAmount || 0), 0) });
             bookingsByMonth.push({ month: label, bookings: monthBookings.length });
         }
 
@@ -70,7 +76,7 @@ export async function GET() {
             'Sunlit Studio': 0,
         };
 
-        for (const b of bookings) {
+        for (const b of activeBookings) {
             const raw = b.roomName || 'Other';
             const mapped = otaToWebsite[raw] || raw;
             if (mapped in roomTotals) {

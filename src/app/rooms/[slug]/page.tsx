@@ -15,7 +15,7 @@ const fallbackRoomsData = [
   {
     slug: "skyline-haven",
     name: "Skyline Haven",
-    price: 2599,
+    price: 2499,
     heroImage: "/skyline-room-1.jpg",
     gallery: ["/skyline-balcony-4.jpg", "/skyline-room-2.jpg", "/skyline-balcony-1.jpg", "/skyline-balcony-2.jpg", "/skyline-balcony-3.jpg", "/skyline-bathroom-1.jpg", "/skyline-bathroom-2.jpg"],
     videoUrl: "/skyline-room-tour.mp4",
@@ -25,7 +25,7 @@ const fallbackRoomsData = [
   {
     slug: "zen-nest",
     name: "Zen Nest",
-    price: 1599,
+    price: 1499,
     heroImage: "/zen-room-1.jpg",
     gallery: ["/zen-room-2.jpg", "/zen-window.jpg", "/zen-bathroom-1.jpg", "/zen-bathroom-2.jpg"],
     videoUrl: null,
@@ -35,7 +35,7 @@ const fallbackRoomsData = [
   {
     slug: "sunlit-studio",
     name: "Sunlit Studio",
-    price: 2199,
+    price: 1799,
     heroImage: "/sunlit-room-1.jpg",
     gallery: ["/sunlit-room-3.jpg", "/sunlit-balcony.jpg", "/sunlit-room-2.jpg", "/sunlit-bathroom-1.jpg", "/sunlit-bathroom-2.jpg"],
     videoUrl: "/sunlit-room-tour.mp4",

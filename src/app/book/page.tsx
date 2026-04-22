@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Script from "next/script";
@@ -12,11 +12,12 @@ import { ArrowLeft, Calendar, User, Check, Phone, Mail, Loader2, CreditCard, Mes
 import InvoiceModal from "@/components/InvoiceModal";
 import { useBookings } from "@/context/BookingContext"; // Import Context
 import { useAuth } from "@/context/AuthContext";
+import AuthModal from "@/components/AuthModal";
 
 const ROOMS = [
-  { id: "skyline-haven", name: "Skyline Haven", price1: 2599, price2: 3199, image: "/skyline-room-1.jpg" },
-  { id: "zen-nest", name: "Zen Nest", price1: 1599, price2: 1999, image: "/zen-room-1.jpg" },
-  { id: "sunlit-studio", name: "Sunlit Studio", price1: 2199, price2: 2599, image: "/sunlit-room-1.jpg" },
+  { id: "skyline-haven", name: "Skyline Haven", price1: 2499, price2: 3199, image: "/skyline-room-1.jpg" },
+  { id: "zen-nest", name: "Zen Nest", price1: 1499, price2: 1999, image: "/zen-room-1.jpg" },
+  { id: "sunlit-studio", name: "Sunlit Studio", price1: 1799, price2: 2599, image: "/sunlit-room-1.jpg" },
 ];
 
 const PACKAGES = [
@@ -120,8 +121,53 @@ function BookingContent() {
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null); // Store confirmed booking data
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Auth modal state (for post-booking account creation prompt)
+  // Auth modal state (for mandatory signup before booking or post-booking account creation prompt)
   const [showCreateAccountPrompt, setShowCreateAccountPrompt] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  // Intersection Observer for Mobile Sticky Bar
+  const mainPayButtonRef = useRef<HTMLButtonElement>(null);
+  const [showMobileBar, setShowMobileBar] = useState(true);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    let completedSteps = 0;
+    const totalSteps = 3;
+
+    if (selectedRoomId) completedSteps++;
+    if (checkInDate && checkOutDate) completedSteps++;
+
+    const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const validPhone = phone.length === 10;
+    if (name.length >= 2 && validEmail && validPhone) completedSteps++;
+
+    setProgress((completedSteps / totalSteps) * 100);
+  }, [selectedRoomId, checkInDate, checkOutDate, name, email, phone]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // If the main pay button is visible in the viewport, hide the sticky bar
+        setShowMobileBar(!entry.isIntersecting);
+      },
+      {
+        root: null,
+        rootMargin: "0px",
+        threshold: 0.1 // Trigger when 10% of the button is visible
+      }
+    );
+
+    if (mainPayButtonRef.current) {
+      observer.observe(mainPayButtonRef.current);
+    }
+
+    return () => {
+      if (mainPayButtonRef.current) {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        observer.unobserve(mainPayButtonRef.current);
+      }
+    };
+  }, []);
 
   // BLOCKED DATES (already booked) - as Date objects for DatePicker
   const [blockedDates, setBlockedDates] = useState<Date[]>([]);
@@ -133,7 +179,7 @@ function BookingContent() {
     specialRequestOptions: [] as string[],
   });
 
-// FETCH SETTINGS
+  // FETCH SETTINGS
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -175,7 +221,7 @@ function BookingContent() {
     const checkinParam = searchParams.get("checkin");
     const checkoutParam = searchParams.get("checkout");
     const unitParam = searchParams.get("unit"); // Added unit
-    
+
     // Callback redirect handling
     const paymentParam = searchParams.get("payment");
     const orderIdParam = searchParams.get("orderId");
@@ -289,7 +335,7 @@ function BookingContent() {
   const selectedRoom = ROOMS.find((r) => r.id === selectedRoomId) || ROOMS[0];
 
 
-const calculateTotal = () => {
+  const calculateTotal = () => {
     if (!checkIn || !checkOut) return 0;
     const start = new Date(checkIn);
     const end = new Date(checkOut);
@@ -347,6 +393,12 @@ const calculateTotal = () => {
   // --- STEP 1: PAYMENT HANDLER ---
   const handlePayment = async () => {
     if (!isFormValid) return;
+
+    if (!user) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
@@ -469,7 +521,7 @@ const calculateTotal = () => {
   };
 
 
-// --- STEP 3: SEND EMAIL ---
+  // --- STEP 3: SEND EMAIL ---
   const finalizeEmail = async (bookingId: string) => {
     const selectedAddOnsList = getSelectedAddOnsData();
     const templateParams = {
@@ -505,7 +557,7 @@ const calculateTotal = () => {
       setIsProcessing(false);
       setIsSuccess(true);
 
-setInvoiceData({
+      setInvoiceData({
         id: bookingId,
         roomName: selectedRoom.name,
         guestName: name,
@@ -530,17 +582,17 @@ setInvoiceData({
       // Still show success UI because payment worked
       alert("Booking confirmed! (Email delivery pending)");
       // Show invoice anyway
-      setInvoiceData({ 
-        id: bookingId, 
-        roomName: selectedRoom.name, 
-        guestName: name, 
-        email, 
-        checkIn, 
-        checkOut, 
-        nights, 
-        basePrice, 
+      setInvoiceData({
+        id: bookingId,
+        roomName: selectedRoom.name,
+        guestName: name,
+        email,
+        checkIn,
+        checkOut,
+        nights,
+        basePrice,
         addOnsTotal,
-        taxes, 
+        taxes,
         grandTotal,
         addOns: getSelectedAddOnsData()
       });
@@ -556,12 +608,19 @@ setInvoiceData({
         id="razorpay-checkout-js"
         src="https://checkout.razorpay.com/v1/checkout.js"
       />
-      <div className="min-h-screen bg-stone-950 pt-32 pb-32 lg:pb-24 px-6 relative">
+      <div className="min-h-screen bg-[#111111] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-stone-900 via-[#111111] to-[#111111] pt-24 pb-32 lg:pb-24 px-6 relative">
 
         {/* INVOICE MODAL */}
         <InvoiceModal
           isOpen={isInvoiceOpen}
           bookingDetails={invoiceData}
+        />
+
+        {/* AUTH MODAL (MANDATORY BEFORE BOOKING) */}
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          defaultMode="signup"
         />
 
         {/* POST-BOOKING ACCOUNT CREATION PROMPT */}
@@ -584,44 +643,57 @@ setInvoiceData({
           </div>
         )}
 
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-12">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-12">
 
           {/* LEFT: FORM */}
           <div className="lg:col-span-2">
-            <Link
-              href="/"
-              className="relative z-50 inline-flex items-center text-xs font-bold tracking-widest text-stone-400 hover:text-white mb-8 uppercase transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" /> Return Home
-            </Link>
-
-            <h1 className="font-serif text-4xl text-white mb-2">Confirm Your Stay</h1>
+            <h1 className="font-josefin text-4xl text-white mb-2">Confirm Your Stay</h1>
             <p className="text-stone-400 mb-10">You are just a few steps away from the mountains.</p>
 
-            <div className="bg-white p-8 rounded-sm shadow-xl border border-stone-800 space-y-8">
+            {/* PROGRESS BAR */}
+            <div className="sticky top-16 z-40 bg-stone-900/60 backdrop-blur-2xl py-4 -mx-6 px-6 lg:mx-0 lg:px-0 mb-8 border-b border-stone-800/50 lg:border-none shadow-[0_10px_30px_rgba(0,0,0,0.5)] lg:shadow-none">
+              <div className="flex justify-between text-xs font-bold tracking-widest text-stone-400 uppercase mb-2">
+                <span>Booking Progress</span>
+                <span className="text-saffron">{Math.round(progress)}%</span>
+              </div>
+              <div className="h-1 bg-stone-800 w-full rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-saffron transition-all duration-500 ease-out"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="bg-[#FCFBF9] px-8 py-6 md:px-10 md:py-1 rounded-sm shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-stone-200/50 space-y-10 relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-saffron to-transparent opacity-30"></div>
 
               {/* 0. PACKAGES */}
               <div>
-                <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-1 flex items-center gap-2">
-                  <Mountain className="w-4 h-4 text-saffron" />
-                  Packages &amp; Experiences
-                </label>
-                <p className="text-[11px] text-stone-400 mb-3">Optional — add a curated mountain experience to your stay.</p>
+                <div className="mb-6">
+                  <h2 className="font-josefin text-2xl text-stone-900 flex items-center gap-2">
+                    <Mountain className="w-5 h-5 text-saffron" />
+                    Packages &amp; Experiences
+                  </h2>
+                  <p className="text-sm text-stone-500 mt-1">Optional — add a curated mountain experience to your stay.</p>
+                  <div className="h-px bg-stone-200 mt-4 w-full"></div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {PACKAGES.map((pkg) => (
                     <button
                       key={pkg.id}
                       type="button"
                       onClick={() => setSelectedPackage(selectedPackage === pkg.id ? null : pkg.id)}
-                      className={`p-4 border text-left transition-all ${
-                        selectedPackage === pkg.id
-                          ? "border-saffron bg-saffron/5 ring-1 ring-saffron"
-                          : "border-stone-200 hover:border-stone-400"
-                      }`}
+                      className={`relative overflow-hidden p-5 border rounded-sm text-left transition-all duration-300 ${selectedPackage === pkg.id
+                        ? "border-saffron bg-white shadow-md ring-1 ring-saffron/50 scale-[1.02]"
+                        : "border-stone-200 bg-white hover:border-stone-300 hover:shadow-sm hover:-translate-y-0.5"
+                        }`}
                     >
-                      <div className="flex justify-between items-start mb-2">
+                      {selectedPackage === pkg.id && (
+                        <div className="absolute inset-0 bg-gradient-to-br from-saffron/5 to-transparent pointer-events-none"></div>
+                      )}
+                      <div className="relative flex justify-between items-start mb-3">
                         <div>
-                          <div className="font-medium text-stone-900">{pkg.name}</div>
+                          <div className="font-josefin text-lg font-semibold text-stone-900">{pkg.name}</div>
                           <div className="text-[11px] text-stone-400 mt-0.5">{pkg.tagline}</div>
                         </div>
                         <div className="text-sm font-bold text-saffron shrink-0 ml-2">₹{pkg.price.toLocaleString()}</div>
@@ -646,100 +718,136 @@ setInvoiceData({
               </div>
 
               {/* 1. ROOMS */}
-              <div>
-                <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">Select Suite</label>
+              <div className="pt-4">
+                <div className="mb-6">
+                  <h2 className="font-josefin text-2xl text-stone-900">Select Your Suite</h2>
+                  <p className="text-sm text-stone-500 mt-1">Choose your perfect mountain sanctuary.</p>
+                  <div className="h-px bg-stone-200 mt-4 w-full"></div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {ROOMS.map((room) => (
                     <button
                       key={room.id}
                       onClick={() => setSelectedRoomId(room.id)}
-                      className={`p-4 border text-left transition-all ${selectedRoomId === room.id
-                        ? "border-saffron bg-stone-50 ring-1 ring-saffron"
-                        : "border-stone-200 hover:border-stone-400"
+                      className={`relative overflow-hidden flex flex-col border rounded-sm text-left transition-all duration-300 group ${selectedRoomId === room.id
+                        ? "border-saffron ring-1 ring-saffron shadow-lg scale-[1.02]"
+                        : "border-stone-200 hover:border-stone-300 hover:shadow-md hover:-translate-y-1"
                         }`}
                     >
-                      <div className="font-serif text-lg text-stone-900">{room.name}</div>
-                      <div className="text-xs text-stone-500 mt-1">₹{(guests === 1 ? room.price1 : room.price2).toLocaleString()} / night</div>
-                      {selectedRoomId === room.id && <Check className="w-4 h-4 text-saffron mt-2" />}
+                      {/* Image */}
+                      <div className="relative w-full h-36 overflow-hidden bg-stone-100 border-b border-stone-100">
+                        <img
+                          src={room.image}
+                          alt={room.name}
+                          className={`object-cover w-full h-full transition-transform duration-700 ${selectedRoomId === room.id ? "scale-105" : "group-hover:scale-105"
+                            }`}
+                        />
+                        {/* Selected overlay fade */}
+                        {selectedRoomId === room.id && (
+                          <div className="absolute inset-0 bg-saffron/10"></div>
+                        )}
+                      </div>
+
+                      {/* Content */}
+                      <div className={`p-4 flex-1 w-full bg-white transition-colors ${selectedRoomId === room.id ? "bg-stone-50" : ""
+                        }`}>
+                        <div className="flex justify-between items-start mb-1">
+                          <div className="font-josefin text-lg font-semibold text-stone-900">{room.name}</div>
+                          {selectedRoomId === room.id && <Check className="w-5 h-5 text-saffron shrink-0 mt-0.5" />}
+                        </div>
+                        <div className="text-sm font-medium text-stone-500">
+                          ₹{(guests === 1 ? room.price1 : room.price2).toLocaleString()} <span className="text-xs font-normal opacity-70">/ night</span>
+                        </div>
+                      </div>
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* 2. DATES */}
+              <div className="pt-4">
+                <div className="mb-6">
+                  <h2 className="font-josefin text-2xl text-stone-900">Stay Details</h2>
+                  <p className="text-sm text-stone-500 mt-1">When will you be joining us?</p>
+                  <div className="h-px bg-stone-200 mt-4 w-full"></div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">
                       Check In <span className="text-stone-500 font-normal ml-1">({formatTime(settings.checkInTime)})</span>
                     </label>
                     <div className="relative">
-                    <Calendar className="absolute left-4 top-3.5 w-4 h-4 text-stone-400 z-10 pointer-events-none" />
-                    <DatePicker
-                      selected={checkInDate}
-                      onChange={(date: Date | null) => setCheckInDate(date)}
-                      excludeDates={blockedDates}
-                      minDate={new Date()}
-                      placeholderText="Select check-in"
-                      dateFormat="MMM d, yyyy"
-                      className="w-full pl-12 pr-4 py-3 border border-stone-200 focus:outline-none focus:border-saffron text-sm bg-transparent cursor-pointer"
-                    />
-                  </div>
+                      <Calendar className="absolute left-4 top-3.5 w-4 h-4 text-stone-400 z-10 pointer-events-none" />
+                      <DatePicker
+                        selected={checkInDate}
+                        onChange={(date: Date | null) => setCheckInDate(date)}
+                        excludeDates={blockedDates}
+                        minDate={new Date()}
+                        placeholderText="Select check-in"
+                        dateFormat="MMM d, yyyy"
+                        className="w-full pl-12 pr-4 py-3 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-saffron/20 focus:border-saffron text-sm transition-all duration-200 bg-white cursor-pointer"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">
                       Check Out <span className="text-stone-500 font-normal ml-1">({formatTime(settings.checkOutTime)})</span>
                     </label>
                     <div className="relative">
-                    <Calendar className="absolute left-4 top-3.5 w-4 h-4 text-stone-400 z-10 pointer-events-none" />
-                    <DatePicker
-                      selected={checkOutDate}
-                      onChange={(date: Date | null) => setCheckOutDate(date)}
-                      excludeDates={blockedDates}
-                      minDate={checkInDate ? new Date(checkInDate.getTime() + 86400000) : new Date()}
-                      disabled={!checkInDate}
-                      placeholderText="Select check-out"
-                      dateFormat="MMM d, yyyy"
-                      className={`w-full pl-12 pr-4 py-3 border border-stone-200 focus:outline-none focus:border-saffron text-sm bg-transparent cursor-pointer ${!checkInDate ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    />
+                      <Calendar className="absolute left-4 top-3.5 w-4 h-4 text-stone-400 z-10 pointer-events-none" />
+                      <DatePicker
+                        selected={checkOutDate}
+                        onChange={(date: Date | null) => setCheckOutDate(date)}
+                        excludeDates={blockedDates}
+                        minDate={checkInDate ? new Date(checkInDate.getTime() + 86400000) : new Date()}
+                        disabled={!checkInDate}
+                        placeholderText="Select check-out"
+                        dateFormat="MMM d, yyyy"
+                        className={`w-full pl-12 pr-4 py-3 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-saffron/20 focus:border-saffron text-sm transition-all duration-200 bg-white cursor-pointer ${!checkInDate ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      />
+                    </div>
                   </div>
-                </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">Guests</label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-3.5 w-4 h-4 text-stone-400" />
-                    <select
-                      className="w-full pl-12 pr-4 py-3 border border-stone-200 focus:outline-none focus:border-saffron text-sm bg-transparent appearance-none"
-                      value={guests}
-                      onChange={(e) => setGuests(parseInt(e.target.value))}
-                    >
-                      {[1, 2, 3, 4].map(num => (
-                        <option key={num} value={num}>{num} {num === 1 ? 'Guest' : 'Guests'}</option>
-                      ))}
-                    </select>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">Guests</label>
+                    <div className="relative">
+                      <User className="absolute left-4 top-3.5 w-4 h-4 text-stone-400" />
+                      <select
+                        className="w-full pl-12 pr-4 py-3 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-saffron/20 focus:border-saffron text-sm bg-white appearance-none transition-all duration-200 cursor-pointer"
+                        value={guests}
+                        onChange={(e) => setGuests(parseInt(e.target.value))}
+                      >
+                        {[1, 2, 3, 4].map(num => (
+                          <option key={num} value={num}>{num} {num === 1 ? 'Guest' : 'Guests'}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* 2.5 SPECIFIC ROOM SELECTION */}
               {isDateValid && (
-                <div>
-                  <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">
-                    Select Specific Room
-                    {isCheckingUnits && <span className="ml-2 text-[10px] text-saffron normal-case animate-pulse">Checking availability...</span>}
-                  </label>
-                  
+                <div className="pt-4">
+                  <div className="mb-6">
+                    <h2 className="font-josefin text-2xl text-stone-900 flex items-center">
+                      Select Specific Room
+                      {isCheckingUnits && <span className="ml-3 text-[12px] font-sans text-saffron normal-case animate-pulse">Checking availability...</span>}
+                    </h2>
+                    <p className="text-sm text-stone-500 mt-1">Reserve a specific unit number (optional).</p>
+                    <div className="h-px bg-stone-200 mt-4 w-full"></div>
+                  </div>
+
                   {availableUnits.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {availableUnits.map((unit) => (
                         <button
                           key={unit._id}
                           onClick={() => setAssignedUnit(unit._id)}
-                          className={`flex items-center justify-between p-3 border rounded-sm transition-all text-left ${
-                            assignedUnit === unit._id
-                              ? "border-saffron bg-stone-50 ring-1 ring-saffron"
-                              : "border-stone-200 hover:border-stone-400"
-                          }`}
+                          className={`flex items-center justify-between p-4 border rounded-sm transition-all duration-300 text-left ${assignedUnit === unit._id
+                            ? "border-saffron bg-white ring-1 ring-saffron shadow-md scale-[1.02]"
+                            : "border-stone-200 bg-white hover:border-stone-300 hover:shadow-sm"
+                            }`}
                         >
                           <span className="text-sm font-medium text-stone-800">{unit.name}</span>
                           {assignedUnit === unit._id && <Check className="w-4 h-4 text-saffron" />}
@@ -750,56 +858,17 @@ setInvoiceData({
                     <div className="p-4 bg-stone-50 border border-stone-100 text-stone-500 text-sm italic">
                       {isCheckingUnits ? "Loading rooms..." : "System will assign the best available room automatically."}
                     </div>
-)}
-                </div>
-              )}
-
-              {/* 3. ENHANCE YOUR STAY (ADD-ONS) */}
-              {isDateValid && availableAddOns.length > 0 && (
-                <div>
-                  <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-saffron" />
-                    Enhance Your Stay
-                  </label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {availableAddOns.map((addon) => (
-                      <button
-                        key={addon._id}
-                        onClick={() => {
-                          if (selectedAddOns.includes(addon._id)) {
-                            setSelectedAddOns(selectedAddOns.filter(id => id !== addon._id));
-                          } else {
-                            setSelectedAddOns([...selectedAddOns, addon._id]);
-                          }
-                        }}
-                        className={`p-4 border text-left transition-all ${
-                          selectedAddOns.includes(addon._id)
-                            ? "border-saffron bg-saffron/5 ring-1 ring-saffron"
-                            : "border-stone-200 hover:border-stone-400"
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="font-medium text-stone-900">{addon.name}</div>
-                            {addon.description && (
-                              <div className="text-xs text-stone-500 mt-1">{addon.description}</div>
-                            )}
-                          </div>
-                          <div className="text-sm font-bold text-saffron">₹{addon.price.toLocaleString()}</div>
-                        </div>
-                        {selectedAddOns.includes(addon._id) && (
-                          <Check className="w-4 h-4 text-saffron mt-2" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-[10px] text-stone-400 mt-2 ml-1">Add-ons are charged once per booking.</p>
+                  )}
                 </div>
               )}
 
               {/* 4. PERSONAL DETAILS */}
-              <div>
-                <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">Personal Details</label>
+              <div className="pt-4">
+                <div className="mb-6">
+                  <h2 className="font-josefin text-2xl text-stone-900">Guest Information</h2>
+                  <p className="text-sm text-stone-500 mt-1">Who is the reservation for?</p>
+                  <div className="h-px bg-stone-200 mt-4 w-full"></div>
+                </div>
                 <div className="grid grid-cols-1 gap-4">
                   <div className="relative">
                     <User className="absolute left-4 top-3.5 w-4 h-4 text-stone-400" />
@@ -811,7 +880,7 @@ setInvoiceData({
                         const val = e.target.value;
                         if (/^[a-zA-Z\s]*$/.test(val)) setName(val);
                       }}
-                      className="w-full pl-12 pr-4 py-3 border border-stone-200 focus:outline-none focus:border-saffron text-sm"
+                      className="w-full pl-12 pr-4 py-3 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-saffron/20 focus:border-saffron text-sm bg-white transition-all duration-200"
                     />
                   </div>
                   <div className="relative">
@@ -821,7 +890,7 @@ setInvoiceData({
                       placeholder="Email Address"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className={`w-full pl-12 pr-4 py-3 border focus:outline-none text-sm transition-colors ${email.length > 0 && !isEmailValid ? "border-red-300 bg-red-50" : "border-stone-200 focus:border-saffron"
+                      className={`w-full pl-12 pr-4 py-3 border focus:outline-none focus:ring-2 focus:ring-saffron/20 text-sm transition-all duration-200 bg-white ${email.length > 0 && !isEmailValid ? "border-red-300 bg-red-50" : "border-stone-200 focus:border-saffron"
                         }`}
                     />
                   </div>
@@ -833,7 +902,7 @@ setInvoiceData({
                       value={phone}
                       maxLength={10}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                      className={`w-full pl-12 pr-4 py-3 border focus:outline-none text-sm transition-colors ${phone.length > 0 && !isPhoneValid ? "border-red-300 bg-red-50" : "border-stone-200 focus:border-saffron"
+                      className={`w-full pl-12 pr-4 py-3 border focus:outline-none focus:ring-2 focus:ring-saffron/20 text-sm transition-all duration-200 bg-white ${phone.length > 0 && !isPhoneValid ? "border-red-300 bg-red-50" : "border-stone-200 focus:border-saffron"
                         }`}
                     />
                   </div>
@@ -841,11 +910,15 @@ setInvoiceData({
               </div>
 
 
-              {/* 4. SPECIAL REQUESTS */}
-              <div>
-                <label className="block text-xs font-bold tracking-widest uppercase text-stone-400 mb-3">Special Requests</label>
-                <div className="bg-stone-50 p-4 border border-stone-100 rounded-sm space-y-4">
-                  
+              {/* 5. SPECIAL REQUESTS */}
+              <div className="pt-4">
+                <div className="mb-6">
+                  <h2 className="font-josefin text-2xl text-stone-900">Special Requests</h2>
+                  <p className="text-sm text-stone-500 mt-1">Let us know how we can make your stay more comfortable.</p>
+                  <div className="h-px bg-stone-200 mt-4 w-full"></div>
+                </div>
+                <div className="bg-stone-100/50 p-5 border border-stone-200/50 rounded-sm space-y-4">
+
                   {/* Options */}
                   {settings.specialRequestOptions.length > 0 && (
                     <div className="flex flex-wrap gap-3">
@@ -877,20 +950,69 @@ setInvoiceData({
                       value={customRequest}
                       onChange={(e) => setCustomRequest(e.target.value)}
                       rows={3}
-                      className="w-full pl-12 pr-4 py-3 border border-stone-200 focus:outline-none focus:border-saffron text-sm resize-none bg-white"
+                      className="w-full pl-12 pr-4 py-3 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-saffron/20 focus:border-saffron text-sm resize-none bg-white transition-all duration-200"
                     />
                   </div>
                 </div>
                 <p className="text-[10px] text-stone-400 mt-2 ml-1">* Special requests are subject to availability and may incur additional charges.</p>
               </div>
 
+              {/* 3. ENHANCE YOUR STAY (ADD-ONS) */}
+              {isDateValid && availableAddOns.length > 0 && (
+                <div className="pt-4">
+                  <div className="mb-6">
+                    <h2 className="font-josefin text-2xl text-stone-900 flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-saffron" />
+                      Enhance Your Stay
+                    </h2>
+                    <p className="text-sm text-stone-500 mt-1">Personalize your visit with these thoughtful additions.</p>
+                    <div className="h-px bg-stone-200 mt-4 w-full"></div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {availableAddOns.map((addon) => (
+                      <button
+                        key={addon._id}
+                        onClick={() => {
+                          if (selectedAddOns.includes(addon._id)) {
+                            setSelectedAddOns(selectedAddOns.filter(id => id !== addon._id));
+                          } else {
+                            setSelectedAddOns([...selectedAddOns, addon._id]);
+                          }
+                        }}
+                        className={`relative overflow-hidden p-5 border rounded-sm text-left transition-all duration-300 ${selectedAddOns.includes(addon._id)
+                          ? "border-saffron bg-white ring-1 ring-saffron shadow-md scale-[1.02]"
+                          : "border-stone-200 bg-white hover:border-stone-300 hover:shadow-sm"
+                          }`}
+                      >
+                        {selectedAddOns.includes(addon._id) && (
+                          <div className="absolute inset-0 bg-gradient-to-br from-saffron/5 to-transparent pointer-events-none"></div>
+                        )}
+                        <div className="relative flex justify-between items-start">
+                          <div>
+                            <div className="font-josefin text-lg font-semibold text-stone-900">{addon.name}</div>
+                            {addon.description && (
+                              <div className="text-xs text-stone-500 mt-1">{addon.description}</div>
+                            )}
+                          </div>
+                          <div className="text-sm font-bold text-saffron">₹{addon.price.toLocaleString()}</div>
+                        </div>
+                        {selectedAddOns.includes(addon._id) && (
+                          <Check className="w-4 h-4 text-saffron mt-2" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-stone-400 mt-2 ml-1">Add-ons are charged once per booking.</p>
+                </div>
+              )}
+
             </div>
           </div>
 
           {/* RIGHT: SUMMARY (INVOICE STYLE) */}
-          <div className="lg:col-span-1">
-            <div className="bg-stone-900 text-stone-100 p-8 rounded-sm border border-stone-800 shadow-2xl h-fit">
-              <h3 className="font-serif text-2xl mb-6">Invoice Summary</h3>
+          <div className="lg:col-span-1 hidden lg:block">
+            <div className="bg-stone-900/80 backdrop-blur-xl text-stone-100 p-8 rounded-sm border border-stone-700/50 shadow-2xl h-fit sticky top-24">
+              <h3 className="font-serif text-2xl mb-6 text-stone-50">Invoice Summary</h3>
 
               <div className="flex justify-between items-center pb-4 border-b border-stone-800 mb-4">
                 <span className="text-sm opacity-80">Suite</span>
@@ -910,7 +1032,7 @@ setInvoiceData({
                 <span>{nights > 0 ? `${nights} Nights` : "--"}</span>
               </div>
 
-{/* INVOICE BREAKDOWN */}
+              {/* INVOICE BREAKDOWN */}
               <div className="space-y-3 mb-6 pb-6 border-b border-stone-800">
                 <div className="flex justify-between text-sm opacity-70">
                   <span>Base Rate ({nights} nights)</span>
@@ -944,16 +1066,17 @@ setInvoiceData({
                 </div>
               </div>
 
-              <div className="flex justify-between items-center text-xl font-serif font-bold text-saffron mb-8">
+              <div className="flex justify-between items-center text-xl font-serif font-bold text-saffron mb-8 drop-shadow-[0_0_8px_rgba(212,175,55,0.3)]">
                 <span>Grand Total</span>
-                <span>₹{grandTotal.toLocaleString()}</span>
+                <span className="text-2xl">₹{grandTotal.toLocaleString()}</span>
               </div>
 
               {/* BUTTON */}
               <button
+                ref={mainPayButtonRef}
                 onClick={handlePayment}
                 disabled={!isFormValid || isProcessing || isSuccess}
-                className={`w-full py-4 text-xs font-bold tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2
+                className={`w-full py-4 rounded-sm text-xs font-bold tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2
                 ${isSuccess
                     ? "bg-green-600 text-white cursor-default"
                     : isFormValid && !isProcessing
@@ -980,16 +1103,21 @@ setInvoiceData({
       </div>
 
       {/* MOBILE STICKY PAY BAR */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-stone-900 border-t border-stone-700 p-4 z-50 shadow-2xl">
+      <div
+        className={`lg:hidden fixed bottom-0 left-0 right-0 bg-stone-900/90 backdrop-blur-lg border-t border-white/10 p-4 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] transition-transform duration-500 ease-in-out ${showMobileBar ? "translate-y-0" : "translate-y-full"
+          }`}
+      >
         <div className="flex items-center justify-between max-w-lg mx-auto">
           <div>
             <p className="text-[10px] text-stone-400 uppercase tracking-wider">Grand Total</p>
-            <p className="text-xl font-serif font-bold text-saffron">₹{grandTotal.toLocaleString()}</p>
+            <p className="text-xl font-serif font-bold text-saffron">
+              {grandTotal > 0 ? `₹${grandTotal.toLocaleString()}` : <span className="text-sm font-sans text-stone-500 font-normal">Select details</span>}
+            </p>
           </div>
           <button
             onClick={handlePayment}
             disabled={!isFormValid || isProcessing || isSuccess}
-            className={`px-6 py-3 text-xs font-bold tracking-widest uppercase transition-all duration-300 flex items-center gap-2
+            className={`px-6 py-3 rounded-sm text-xs font-bold tracking-widest uppercase transition-all duration-300 flex items-center gap-2
             ${isSuccess
                 ? "bg-green-600 text-white cursor-default"
                 : isFormValid && !isProcessing
