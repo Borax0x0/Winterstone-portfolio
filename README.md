@@ -38,10 +38,6 @@ npm run dev
 ## Admin
 
 Access at `/admin`. Create a user with `role: "admin"` in MongoDB.
-
-##yo
-
 ---
-
 *Built as a client project. Portfolio showcase.*
 Triggering Vercel deployment
