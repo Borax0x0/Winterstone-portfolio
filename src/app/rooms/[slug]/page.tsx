@@ -78,6 +78,10 @@ export default function RoomPage() {
   const [blockedDates, setBlockedDates] = useState<Date[]>([]);
   const [isLoadingDates, setIsLoadingDates] = useState(true);
 
+  // Sticky bar
+  const sidebarRef = React.useRef<HTMLDivElement>(null);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+
   // Fetch room data from API
   useEffect(() => {
     const fetchRoomData = async () => {
@@ -148,6 +152,23 @@ export default function RoomPage() {
     };
     fetchBlocked();
   }, [params.slug]);
+
+  // IntersectionObserver — show sticky bar when sidebar scrolls out of view
+  React.useEffect(() => {
+    const el = sidebarRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowStickyBar(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isLoading]);
+
+  // Night count helper
+  const nights = checkInDate && checkOutDate
+    ? Math.round((checkOutDate.getTime() - checkInDate.getTime()) / 86400000)
+    : 0;
 
   // Loading state
   if (isLoading) {
@@ -252,7 +273,7 @@ export default function RoomPage() {
           </div>
 
           {/* Booking Sidebar */}
-          <div className="relative">
+          <div className="relative" ref={sidebarRef}>
             <div className="bg-stone-100 p-6 rounded-sm border border-stone-200">
               <h3 className="font-serif font-bold text-xl mb-1">Reserve Your Stay</h3>
               <p className="text-xs text-stone-500 mb-5 tracking-wide">Best rates guaranteed when booking directly.</p>
@@ -305,6 +326,12 @@ export default function RoomPage() {
                         <span className="text-stone-400 uppercase tracking-widest block">Check Out</span>
                         <span className="font-semibold text-stone-800">{checkOutDate ? checkOutDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</span>
                       </div>
+                      {nights > 0 && (
+                        <div className="pt-1 border-t border-stone-100">
+                          <span className="text-stone-400 uppercase tracking-widest block">Estimate</span>
+                          <span className="font-bold text-stone-900 text-sm">{nights} night{nights > 1 ? 's' : ''} · ₹{(nights * room!.price).toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
                     </div>
                     <button
                       onClick={() => { setCheckInDate(null); setCheckOutDate(null); }}
@@ -612,6 +639,44 @@ export default function RoomPage() {
 
           </div>
         )}
+      </div>
+
+      {/* STICKY BOTTOM BAR */}
+      <div className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ${showStickyBar ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div className="bg-stone-900 border-t border-stone-700 px-6 py-4">
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs text-stone-400 uppercase tracking-widest">{room.name}</p>
+              {nights > 0 ? (
+                <p className="text-white font-serif font-bold text-lg">
+                  {nights} night{nights > 1 ? 's' : ''} · <span className="text-saffron">₹{(nights * room.price).toLocaleString('en-IN')}</span>
+                </p>
+              ) : (
+                <p className="text-white font-serif font-bold text-lg">
+                  from <span className="text-saffron">₹{room.price.toLocaleString('en-IN')}</span>
+                  <span className="text-stone-400 text-xs font-sans font-normal ml-1">/ night</span>
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                if (checkInDate && checkOutDate) {
+                  const p = new URLSearchParams({
+                    room: room.slug,
+                    checkin: checkInDate.toISOString(),
+                    checkout: checkOutDate.toISOString(),
+                  });
+                  router.push(`/book?${p.toString()}`);
+                } else {
+                  sidebarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+              }}
+              className="flex-shrink-0 bg-saffron text-stone-900 px-8 py-3 text-xs font-bold tracking-widest uppercase hover:bg-white transition-colors"
+            >
+              {checkInDate && checkOutDate ? 'Book These Dates →' : 'Select Dates ↑'}
+            </button>
+          </div>
+        </div>
       </div>
 
     </main>
