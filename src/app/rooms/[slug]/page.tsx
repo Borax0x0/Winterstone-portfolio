@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useParams } from "next/navigation";
-import { ArrowLeft, ChevronLeft, ChevronRight, X, Clock } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { ArrowLeft, ChevronLeft, ChevronRight, X, Clock, RotateCcw } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import AvailabilityModal from "@/components/AvailabilityModal";
 import ReviewForm from "@/components/ReviewForm";
 import ReviewsList from "@/components/ReviewsList";
@@ -58,16 +60,23 @@ interface Room {
 
 export default function RoomPage() {
   const params = useParams();
+  const router = useRouter();
   const [room, setRoom] = useState<Room | null>(null);
   const [allRooms, setAllRooms] = useState<Room[]>([]);
   const [units, setUnits] = useState<{ _id: string; name: string; isActive: boolean; image: string; shortDescription: string; features: string[] }[]>([]);
-  const [selectedUnit, setSelectedUnit] = useState<string | null>(null); // Track selected unit for modal
+  const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [settings, setSettings] = useState<{ checkInTime: string; checkOutTime: string } | null>(null);
+
+  // Inline calendar state
+  const [checkInDate, setCheckInDate] = useState<Date | null>(null);
+  const [checkOutDate, setCheckOutDate] = useState<Date | null>(null);
+  const [blockedDates, setBlockedDates] = useState<Date[]>([]);
+  const [isLoadingDates, setIsLoadingDates] = useState(true);
 
   // Fetch room data from API
   useEffect(() => {
@@ -118,6 +127,26 @@ export default function RoomPage() {
     };
 
     fetchRoomData();
+  }, [params.slug]);
+
+  // Fetch blocked dates when slug changes
+  useEffect(() => {
+    if (!params.slug) return;
+    const fetchBlocked = async () => {
+      setIsLoadingDates(true);
+      try {
+        const res = await fetch(`/api/bookings/availability?room=${params.slug}`);
+        const data = await res.json();
+        if (res.ok && data.blockedDates) {
+          setBlockedDates(data.blockedDates.map((d: string) => new Date(d)));
+        }
+      } catch {
+        // silently fail — calendar still works without blocked dates
+      } finally {
+        setIsLoadingDates(false);
+      }
+    };
+    fetchBlocked();
   }, [params.slug]);
 
   // Loading state
@@ -222,17 +251,95 @@ export default function RoomPage() {
             </ul>
           </div>
 
+          {/* Booking Sidebar */}
           <div className="relative">
-            <div className="bg-stone-100 p-8 rounded-sm border border-stone-200">
-              <h3 className="font-serif font-bold text-xl mb-4">Reserve Your Stay</h3>
-              <p className="text-sm text-stone-500 mb-6">Best rates guaranteed when booking directly.</p>
+            <div className="bg-stone-100 p-6 rounded-sm border border-stone-200">
+              <h3 className="font-serif font-bold text-xl mb-1">Reserve Your Stay</h3>
+              <p className="text-xs text-stone-500 mb-5 tracking-wide">Best rates guaranteed when booking directly.</p>
 
-              {/* General Availability */}
+              {/* Inline Calendar */}
+              <div className="relative mb-3">
+                {isLoadingDates && (
+                  <div className="absolute inset-0 bg-stone-100/80 z-10 flex items-center justify-center rounded-sm">
+                    <span className="text-[10px] text-stone-400 uppercase tracking-widest animate-pulse">Loading availability...</span>
+                  </div>
+                )}
+                <DatePicker
+                  selected={checkInDate}
+                  onChange={(dates: [Date | null, Date | null]) => {
+                    const [start, end] = dates;
+                    setCheckInDate(start);
+                    setCheckOutDate(end);
+                  }}
+                  startDate={checkInDate}
+                  endDate={checkOutDate}
+                  selectsRange
+                  inline
+                  monthsShown={1}
+                  minDate={new Date()}
+                  excludeDates={blockedDates}
+                  dateFormat="MMM d, yyyy"
+                />
+              </div>
+
+              {/* Legend */}
+              <div className="flex items-center gap-4 mb-4 flex-wrap">
+                <span className="flex items-center gap-1.5 text-[10px] text-stone-400 uppercase tracking-wider">
+                  <span className="inline-block w-2.5 h-2.5 rounded-sm bg-saffron/70"></span>Selected
+                </span>
+                <span className="flex items-center gap-1.5 text-[10px] text-stone-400 uppercase tracking-wider">
+                  <span className="inline-block w-2.5 h-2.5 rounded-sm bg-red-200"></span>Booked
+                </span>
+              </div>
+
+              {/* Selected date summary */}
+              {checkInDate && (
+                <div className="mb-4 p-3 bg-white border border-stone-200 text-xs">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-2">
+                      <div>
+                        <span className="text-stone-400 uppercase tracking-widest block">Check In</span>
+                        <span className="font-semibold text-stone-800">{checkInDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                      <div>
+                        <span className="text-stone-400 uppercase tracking-widest block">Check Out</span>
+                        <span className="font-semibold text-stone-800">{checkOutDate ? checkOutDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setCheckInDate(null); setCheckOutDate(null); }}
+                      className="text-stone-300 hover:text-red-400 transition-colors"
+                      aria-label="Clear dates"
+                    >
+                      <RotateCcw size={14} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* CTA */}
+              <button
+                disabled={!checkInDate || !checkOutDate}
+                onClick={() => {
+                  if (!checkInDate || !checkOutDate) return;
+                  const params = new URLSearchParams({
+                    room: room!.slug,
+                    checkin: checkInDate.toISOString(),
+                    checkout: checkOutDate.toISOString(),
+                  });
+                  router.push(`/book?${params.toString()}`);
+                }}
+                className="w-full bg-stone-900 text-white py-4 text-xs font-bold tracking-widest uppercase hover:bg-saffron hover:text-stone-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-stone-900 disabled:hover:text-white"
+              >
+                {checkInDate && checkOutDate ? 'Book These Dates →' : 'Select Dates Above'}
+              </button>
+
+              {/* Unit-specific availability link */}
               <button
                 onClick={() => { setSelectedUnit(null); setIsModalOpen(true); }}
-                className="w-full bg-stone-900 text-white py-4 text-xs font-bold tracking-widest uppercase hover:bg-saffron hover:text-stone-900 transition-colors"
+                className="w-full mt-2 py-2 text-[10px] text-stone-400 hover:text-saffron transition-colors uppercase tracking-widest"
               >
-                Check Availability
+                Browse specific rooms →
               </button>
             </div>
           </div>

@@ -48,24 +48,33 @@ html {
   color: inherit !important;
 }
 
-/* Blocked/Excluded Dates - Soft red + strikethrough */
+/* Blocked/Excluded Dates — clearly unavailable */
 .react-datepicker__day--excluded {
-  background-color: #fecaca !important; /* Soft red/coral */
-  color: #991b1b !important; /* Dark red text */
-  text-decoration: line-through !important;
+  background-color: #ef4444 !important;
+  color: #fff !important;
   cursor: not-allowed !important;
   border-radius: 4px !important;
-  opacity: 0.9 !important;
+  opacity: 1 !important;
+  font-weight: 600 !important;
 }
 
 .react-datepicker__day--excluded:hover {
-  background-color: #fca5a5 !important; /* Slightly darker on hover */
+  background-color: #dc2626 !important;
+  color: #fff !important;
 }
 
 /* Disabled dates (past dates, etc) */
 .react-datepicker__day--disabled {
   color: #d1d5db !important;
   cursor: not-allowed !important;
+}
+
+/* Outside-month days (overflow from prev/next month) */
+.react-datepicker__day--outside-month {
+  color: #d1d5db !important;
+  background-color: transparent !important;
+  opacity: 0.5 !important;
+  pointer-events: none !important;
 }
 
 /* Make it responsive: Stack calendars on mobile */

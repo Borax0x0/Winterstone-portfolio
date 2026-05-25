@@ -28,22 +28,23 @@ interface EzeeBookingPayload {
 }
 
 // MAPPING: Local slug -> eZee IDs
-// Roomtype_Id values confirmed by Yanolja support (April 2026)
-// TODO: Rateplan_Id and Ratetype_Id still need to be obtained once API access is enabled
+// Roomtype_Id, Ratetype_Id, Rateplan_Id confirmed via live API calls (May 2026)
+// RateTypeID == RoomTypeID confirmed by getdataAPI.php Rate request
+// RatePlanID == RoomTypeID confirmed by pms_connectivity.php RoomInfo response
 const ROOM_ID_MAPPING: Record<string, { Rateplan_Id: string; Ratetype_Id: string; Roomtype_Id: string }> = {
   "zen-nest": {
-    Rateplan_Id: "PENDING_API_ACCESS",    // Standard Double — awaiting API enablement
-    Ratetype_Id: "PENDING_API_ACCESS",
+    Rateplan_Id: "5109700000000000001",   // Standard Double
+    Ratetype_Id: "5109700000000000001",
     Roomtype_Id: "5109700000000000001",
   },
   "sunlit-studio": {
-    Rateplan_Id: "PENDING_API_ACCESS",    // Deluxe Double — awaiting API enablement
-    Ratetype_Id: "PENDING_API_ACCESS",
+    Rateplan_Id: "5109700000000000002",   // Deluxe Double
+    Ratetype_Id: "5109700000000000002",
     Roomtype_Id: "5109700000000000002",
   },
   "skyline-haven": {
-    Rateplan_Id: "PENDING_API_ACCESS",    // Super Deluxe — awaiting API enablement
-    Ratetype_Id: "PENDING_API_ACCESS",
+    Rateplan_Id: "5109700000000000003",   // Super Deluxe
+    Ratetype_Id: "5109700000000000003",
     Roomtype_Id: "5109700000000000003",
   },
 };

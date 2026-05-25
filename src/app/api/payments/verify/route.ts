@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import dbConnect from '@/lib/db';
 import Booking from '@/models/Booking';
+import { pushBookingToEzee } from '@/lib/ezeeSync';
 
 export async function POST(request: Request) {
     try {
@@ -17,12 +18,19 @@ export async function POST(request: Request) {
 
         if (mock) {
             // If this was a mock transaction, just approve it
-            await Booking.findByIdAndUpdate(bookingId, {
+            const confirmedBooking = await Booking.findByIdAndUpdate(bookingId, {
                 status: 'Confirmed',
                 paymentStatus: 'Paid',
                 razorpayOrderId: razorpay_order_id,
                 razorpayPaymentId: 'mock_payment_id',
             }, { new: true });
+
+            // Fire-and-forget push to eZee (non-blocking)
+            if (confirmedBooking) {
+                pushBookingToEzee(confirmedBooking).catch((err) =>
+                    console.error('[eZee Push] Failed after mock payment:', err)
+                );
+            }
 
             return NextResponse.json({ message: "Payment verified (Mock)", success: true });
         }
@@ -43,12 +51,19 @@ export async function POST(request: Request) {
 
         if (isAuthentic) {
             // Update database
-            await Booking.findByIdAndUpdate(bookingId, {
+            const confirmedBooking = await Booking.findByIdAndUpdate(bookingId, {
                 status: 'Confirmed',
                 paymentStatus: 'Paid',
                 razorpayOrderId: razorpay_order_id,
                 razorpayPaymentId: razorpay_payment_id,
-            });
+            }, { new: true });
+
+            // Fire-and-forget push to eZee (non-blocking)
+            if (confirmedBooking) {
+                pushBookingToEzee(confirmedBooking).catch((err) =>
+                    console.error('[eZee Push] Failed after payment verified:', err)
+                );
+            }
 
             return NextResponse.json({ message: "Payment verified", success: true });
         } else {

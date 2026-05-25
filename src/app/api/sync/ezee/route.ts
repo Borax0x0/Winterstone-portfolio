@@ -2,29 +2,13 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import dbConnect from '@/lib/db';
 import Booking from '@/models/Booking';
+import { getXMLBlocks, parseBookingFromXML } from '@/lib/ezeeXml';
 
 interface SessionUser { role?: string; }
 
 // Build the XML request body for eZee
 function buildXMLRequest(fromDate: string, toDate: string): string {
     return `<?xml version="1.0" encoding="UTF-8"?><RES_Request><Request_Type>Booking</Request_Type><Authentication><HotelCode>${process.env.EZEE_HOTEL_CODE}</HotelCode><AuthCode>${process.env.EZEE_AUTH_CODE}</AuthCode></Authentication><FromDate>${fromDate}</FromDate><ToDate>${toDate}</ToDate></RES_Request>`;
-}
-
-// Extract all blocks between <tag>...</tag> (handles nested content)
-function getXMLBlocks(xml: string, tag: string): string[] {
-    const blocks: string[] = [];
-    const regex = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'g');
-    let m: RegExpExecArray | null;
-    while ((m = regex.exec(xml)) !== null) {
-        blocks.push(m[1]);
-    }
-    return blocks;
-}
-
-// Extract a single value from an XML string
-function getXMLVal(xml: string, tag: string): string {
-    const m = xml.match(new RegExp(`<${tag}[^>]*>([^<]*)<\\/${tag}>`));
-    return m ? m[1].trim() : '';
 }
 
 function formatDate(d: Date): string {
@@ -92,44 +76,17 @@ export async function POST() {
                     const bookByBlocks = getXMLBlocks(resBlock, 'BookByInfo');
 
                     for (const bookBy of bookByBlocks) {
-                        const uniqueId = getXMLVal(bookBy, 'UniqueID');
-                        if (!uniqueId) continue;
+                        const parsed = parseBookingFromXML(bookBy);
+                        if (!parsed) continue;
 
-                        const bookingTrans = getXMLBlocks(bookBy, 'BookingTran');
-                        const bookingTran = bookingTrans[0] || '';
-
-                        const tranStatus = getXMLVal(bookingTran, 'Status'); // New, Modify, Cancel
-                        const isCancelled = tranStatus === 'Cancel' || tranStatus === 'Cancelled';
-
-                        const firstName = getXMLVal(bookBy, 'FirstName');
-                        const lastName = getXMLVal(bookBy, 'LastName');
-                        const guestName = [firstName, lastName].filter(Boolean).join(' ') || 'eZee Guest';
-
-                        const checkIn = getXMLVal(bookingTran, 'Start');
-                        const checkOut = getXMLVal(bookingTran, 'End');
-                        if (!checkIn || !checkOut) continue;
-
-                        const bookingData = {
-                            externalBookingId: uniqueId,
-                            source: getXMLVal(bookBy, 'BookedBy') || 'eZee',
-                            guestName,
-                            email: getXMLVal(bookBy, 'Email') || 'noreply@ezee.com',
-                            roomName: getXMLVal(bookingTran, 'RoomTypeName') || 'Room',
-                            checkIn,
-                            checkOut,
-                            totalAmount: parseFloat(getXMLVal(bookingTran, 'TotalRate') || '0'),
-                            status: isCancelled ? 'Cancelled' as const : 'Confirmed' as const,
-                            paymentStatus: 'Paid' as const, // OTA bookings are pre-paid via channel
-                        };
-
-                        const existing = await Booking.findOne({ externalBookingId: uniqueId });
+                        const existing = await Booking.findOne({ externalBookingId: parsed.externalBookingId });
 
                         if (existing) {
-                            await Booking.findByIdAndUpdate(existing._id, bookingData);
-                            if (isCancelled) cancelledCount++;
+                            await Booking.findByIdAndUpdate(existing._id, parsed);
+                            if (parsed.status === 'Cancelled') cancelledCount++;
                             else updatedCount++;
                         } else {
-                            await Booking.create(bookingData);
+                            await Booking.create(parsed);
                             newCount++;
                         }
                     }

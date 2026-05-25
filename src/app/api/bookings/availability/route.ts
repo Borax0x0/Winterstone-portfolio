@@ -1,20 +1,23 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Booking from '@/models/Booking';
-import RoomUnit from '@/models/RoomUnit'; // Import RoomUnit
+import RoomUnit from '@/models/RoomUnit';
 
-// Map room slugs to room names
-const ROOM_SLUG_TO_NAME: Record<string, string> = {
-    'skyline-haven': 'Skyline Haven',
-    'zen-nest': 'Zen Nest',
-    'sunlit-studio': 'Sunlit Studio',
+// All known names per room type — website name + every OTA alias eZee sends
+const ROOM_ALIASES: Record<string, string[]> = {
+    'skyline-haven':  ['Skyline Haven', 'Superior Deluxe', 'SUPER DELUXE', 'Super Deluxe'],
+    'zen-nest':       ['Zen Nest', 'Standard Double', 'STANDARD DOUBLE'],
+    'sunlit-studio':  ['Sunlit Studio', 'Deluxe Room', 'Deluxe Double', 'DELUXE ROOM', 'DELUXE DOUBLE'],
 };
 
 /**
  * GET /api/bookings/availability
- * 
- * Returns all blocked dates for a specific room.
- * Query params: room (slug like "skyline-haven")
+ *
+ * Returns all blocked dates for a specific room type.
+ * OTA bookings (eZee-synced) are included via alias matching.
+ * Query params:
+ *   room  — slug like "skyline-haven"  (required)
+ *   unit  — RoomUnit _id               (optional, for specific-unit view)
  */
 export async function GET(request: Request) {
     try {
@@ -22,18 +25,20 @@ export async function GET(request: Request) {
 
         const { searchParams } = new URL(request.url);
         const roomSlug = searchParams.get('room');
-        const unitId = searchParams.get('unit'); // Specific Unit ID
+        const unitId = searchParams.get('unit');
 
         if (!roomSlug) {
             return NextResponse.json({ error: 'Room slug is required' }, { status: 400 });
         }
 
-        // Convert slug to room name
-        const roomName = ROOM_SLUG_TO_NAME[roomSlug.toLowerCase()];
+        const aliases = ROOM_ALIASES[roomSlug.toLowerCase()];
 
-        if (!roomName) {
+        if (!aliases) {
             return NextResponse.json({ error: 'Invalid room slug' }, { status: 400 });
         }
+
+        // Keep a canonical name for unit-mode queries (first alias = website name)
+        const roomName = aliases[0];
 
         // --- SPECIFIC UNIT AVAILABILITY ---
         if (unitId) {
@@ -64,19 +69,14 @@ export async function GET(request: Request) {
             });
         }
 
-        // --- AGGREGATE AVAILABILITY (Old Logic) ---
-        // 1. Get Total Inventory for this room type
+        // --- AGGREGATE AVAILABILITY ---
+        // 1. Get total inventory for this room type
         let totalInventory = await RoomUnit.countDocuments({ roomTypeSlug: roomSlug, isActive: true });
-        
-        // Fallback: If no units are defined in DB yet, assume 1 (Single Inventory Mode)
-        // Or assume 3 as per user request if we want to hardcode for now, but better to rely on DB
-        if (totalInventory === 0) {
-            totalInventory = 1; 
-        }
+        if (totalInventory === 0) totalInventory = 1;
 
-        // 2. Find all bookings for this room type
+        // 2. Find all active bookings for this room type — including OTA aliases
         const bookings = await Booking.find({
-            roomName: roomName,
+            roomName: { $in: aliases },
             status: { $in: ['Confirmed', 'Pending'] },
         }).select('checkIn checkOut');
 

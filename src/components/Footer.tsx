@@ -155,7 +155,6 @@ export default function Footer() {
         <div className="flex gap-6 mt-4 md:mt-0">
           <Link href="/privacy-policy" className="hover:text-white py-2">Privacy</Link>
           <Link href="/terms" className="hover:text-white py-2">Terms</Link>
-          <Link href="#" className="hover:text-white py-2">Sitemap</Link>
         </div>
       </div>
     </footer>
